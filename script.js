@@ -42,7 +42,7 @@ function toggleAutoScan() {
     }
 }
 
-// --- NEW FUNCTION: FORGOT PASSWORD ---
+// --- FORGOT PASSWORD FUNCTION ---
 async function forgotPassword() {
     const email = document.getElementById('email-input').value.trim();
     if (!email) {
@@ -72,15 +72,20 @@ async function handleAuth() {
     } catch(e) { alert(e.message); }
 }
 
+// Updated to change both the title and the bottom link text
 function toggleAuth() {
     const f = document.getElementById('reg-fields');
     const title = document.getElementById('auth-title');
+    const link = document.getElementById('toggle-link');
+    
     if (f.style.display === 'none') {
         f.style.display = 'block';
         title.innerText = "CREATE ACCOUNT";
+        if(link) link.innerHTML = 'ALREADY HAVE ACCOUNT? <span style="color:var(--neon)">LOGIN</span>';
     } else {
         f.style.display = 'none';
         title.innerText = "ZEBRA TAG LOGIN";
+        if(link) link.innerHTML = 'NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span>';
     }
 }
 
