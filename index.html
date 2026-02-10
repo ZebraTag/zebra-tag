@@ -2,16 +2,20 @@
 <html>
 <head>
     <title>ZEBRA TAG - PRO EDITION</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; transition: background 0.1s; }
         #status-container { position: fixed; top: 10px; right: 10px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; z-index: 1000; }
         .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
         #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; }
+        .description { color: #888; font-size: 0.9rem; max-width: 320px; margin-bottom: 25px; line-height: 1.4; }
+        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; outline: none; }
         #scanner { position: absolute; left: -9999px; opacity: 0; }
-        button { background: #0f0; color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
+        button { background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; }
         #operator-display { color: white; margin-bottom: 20px; font-size: 1.2rem; }
+        .invalid-flash { background: #300 !important; }
     </style>
 </head>
 <body>
@@ -20,7 +24,10 @@
 
     <div id="login-screen">
         <h1>ZEBRA TAG PRO</h1>
-        <input type="text" id="username-input" placeholder="OPERATOR NAME...">
+        <div class="description">
+            Scan official <b>SHP</b> stickers to log progress. Press [SPACE] for manual override.
+        </div>
+        <input type="text" id="username-input" placeholder="OPERATOR NAME..." autocomplete="off">
         <button onclick="joinGame()" style="margin-top: 20px;">START ENGINE</button>
     </div>
 
@@ -33,21 +40,26 @@
     <input type="text" id="scanner">
 
     <script>
-        // 1. YOUR SUPABASE CONFIG
-        const SUPABASE_URL = 'https://awstxoaxwsrhcfimunca.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_aZH46m2lP5s6KFeXrZ1gdA_MFNQROnW';
-        
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 2. YOUR FIREBASE KEYS (Plugged in for you!)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFIuHkzGlTNn20-2hVyQUwaKXyqZ9kPRc",
+            authDomain: "zebratagpro.firebaseapp.com",
+            projectId: "zebratagpro",
+            databaseURL: "https://zebratagpro-default-rtdb.firebaseio.com/", // Verify this in your console!
+            storageBucket: "zebratagpro.firebasestorage.app",
+            messagingSenderId: "202574491794",
+            appId: "1:202574491794:web:a29bdf5a66f44a1cd1764b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         
         let myName = localStorage.getItem('zebraUser') || "";
-        let playerScores = {};
-        let gameStarted = false; // Prevents cursor stealing during login
+        let gameStarted = false; 
 
-        // FIX: Listen for "Enter" key on the login screen
-        document.getElementById('username-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                joinGame();
-            }
+        document.getElementById('username-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinGame();
         });
 
         async function joinGame() {
@@ -56,64 +68,39 @@
                 localStorage.setItem('zebraUser', val);
                 myName = val;
                 bootGame();
-            } else {
-                alert("Enter Name");
-            }
+            } else { alert("Enter Name"); }
         }
 
-        async function bootGame() {
-            gameStarted = true; // Activate scanner focus
+        function bootGame() {
+            gameStarted = true; 
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
             document.getElementById('operator-display').innerText = "OPERATOR: " + myName;
-
             document.getElementById('status-text').innerText = "ONLINE";
             document.getElementById('status-text').style.color = "#0f0";
 
-            // Initial Data Fetch
-            const { data } = await _supabase.from('scores').select('*');
-            if (data) {
-                data.forEach(row => playerScores[row.username] = row.score);
-                render();
-            }
-
-            // Real-time Subscription
-            _supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, payload => {
-                    if (payload.new) {
-                        playerScores[payload.new.username] = payload.new.score;
-                        render();
-                    }
-                    if (payload.eventType === 'DELETE') {
-                        location.reload();
-                    }
-                }).subscribe();
-            
-            // Register presence
-            await _supabase.from('scores').upsert({ 
-                username: myName, 
-                score: playerScores[myName] || 0 
+            // REAL-TIME LISTENER: Updates board whenever ANYONE scans
+            db.ref('scores').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                render(data);
             });
             
-            // Focus scanner only after game starts
             setTimeout(() => document.getElementById('scanner').focus(), 500);
         }
 
-        async function iScored() {
-            let current = (playerScores[myName] || 0) + 1;
-            playerScores[myName] = current;
-            render();
-
-            await _supabase.from('scores').upsert({ 
-                username: myName, 
-                score: current 
+        function iScored() {
+            // Uses a 'transaction' to ensure counts don't get messed up if two people scan at once
+            db.ref('scores/' + myName).transaction((current) => {
+                return (current || 0) + 1;
             });
 
+            // FEEDBACK
+            if (navigator.vibrate) navigator.vibrate(200); 
             document.body.style.background = "#030";
             setTimeout(() => document.body.style.background = "#000", 100);
         }
 
-        function render() {
+        function render(playerScores) {
             const b = document.getElementById('board');
             b.innerHTML = '';
             const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
@@ -123,38 +110,31 @@
             });
         }
 
-        async function resetScores() {
-            if(confirm("DANGER: This wipes scores for EVERYONE. Continue?")) {
-                await _supabase.from('scores').delete().neq('username', 'placeholder_garbage_value');
-                playerScores = {};
-                render();
+        function resetScores() {
+            if(confirm("Wipe all scores globally?")) {
+                db.ref('scores').remove();
             }
         }
 
-        // Logic for Keys and Scanners
+        // SCANNER LOGIC
         document.addEventListener('keydown', (e) => { 
-            if(!gameStarted) return; // Don't steal focus if still at login screen
-            if(e.code === "Space") {
-                e.preventDefault();
-                iScored(); 
-            }
+            if(!gameStarted) return; 
+            if(e.code === "Space") { e.preventDefault(); iScored(); }
             document.getElementById('scanner').focus(); 
         });
 
         document.getElementById('scanner').addEventListener('change', (e) => { 
-            if(e.target.value.trim()) { 
+            const val = e.target.value.trim().toUpperCase();
+            if(val.startsWith("SHP")) { 
                 iScored(); 
-                e.target.value = ''; 
-            } 
+            } else if (val !== "") {
+                document.body.classList.add('invalid-flash');
+                setTimeout(() => document.body.classList.remove('invalid-flash'), 100);
+            }
+            e.target.value = ''; 
         });
 
-        // Smart Auto-focus (only if game is active)
-        setInterval(() => {
-            if(gameStarted) {
-                document.getElementById('scanner').focus();
-            }
-        }, 1000);
-
+        setInterval(() => { if(gameStarted) document.getElementById('scanner').focus(); }, 1000);
         if(myName) bootGame();
     </script>
 </body>
