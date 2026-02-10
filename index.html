@@ -1,60 +1,128 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZEBRA TAG v1.0</title>
+    <title>ZEBRA LAN TAG</title>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
-        body { background: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; overflow: hidden; }
-        #game-ui { border: 4px solid #00ff00; margin: 20px auto; width: 90%; height: 80vh; display: flex; flex-direction: column; justify-content: center; }
-        .hit-flash { animation: flash 0.1s; }
-        @keyframes flash { from { background: red; } to { background: #0a0a0a; } }
-        #score { font-size: 5rem; margin: 0; }
-        input { position: absolute; left: -9999px; } /* Keep hidden but focused */
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
+        .leaderboard { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+        .score-row { border: 1px solid #0f0; width: 90%; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; transition: all 0.2s; }
+        .flash { animation: flash-red 0.1s; }
+        @keyframes flash-red { from { background: #500; } to { background: #000; } }
+        
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; outline: none; }
+        button.join-btn { background: #0f0; color: #000; border: none; padding: 15px 30px; margin-top: 20px; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
+
+        #reset-btn { background: #200; color: #f00; border: 1px solid #f00; padding: 10px; margin-top: 50px; cursor: pointer; font-size: 0.7rem; }
+        #scanner { opacity: 0; position: absolute; z-index: -1; }
+        .user-tag { color: #fff; font-size: 0.9rem; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div id="game-ui">
-        <h3>SYSTEM READY</h3>
-        <p>AIM GREEN LASER AT TARGET</p>
-        <h1 id="score">0</h1>
-        <p id="target-id">NO TARGETS ELIMINATED</p>
+
+    <div id="login-screen">
+        <h1>ZEBRA TAG</h1>
+        <p>ENTER OPERATOR NAME:</p>
+        <input type="text" id="username-input" placeholder="NAME...">
+        <button class="join-btn" onclick="joinGame()">JOIN LOBBY</button>
     </div>
-    <input type="text" id="scanner" autofocus>
+
+    <div id="game-ui" style="display:none;">
+        <div class="user-tag">OPERATOR: <span id="current-user" style="color:#0f0"></span></div>
+        <div id="board" class="leaderboard"></div>
+        <button id="reset-btn" onmousedown="resetScores()">ADMIN: WIPE ALL DATA</button>
+    </div>
+
+    <input type="text" id="scanner">
 
     <script>
-        const input = document.getElementById('scanner');
-        const scoreEl = document.getElementById('score');
-        const targetEl = document.getElementById('target-id');
-        let score = 0;
+        // Using a unique key for your warehouse session
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']).get('zebra-warehouse-final');
+        const scannerInput = document.getElementById('scanner');
+        const board = document.getElementById('board');
+        let playerScores = {};
+        let myName = ""; 
+        let isResetting = false;
+        let gameActive = false;
 
-        // Keep focus so the scanner always "types" here
-        document.addEventListener('click', () => {
-            input.focus();
-            // Start a "Wake Lock" if supported to keep screen on
-            if ('wakeLock' in navigator) { navigator.wakeLock.request('screen'); }
-        });
+        function joinGame() {
+            const val = document.getElementById('username-input').value.trim().toUpperCase();
+            if (val) {
+                myName = val;
+                gameActive = true;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('game-ui').style.display = 'block';
+                document.getElementById('current-user').innerText = myName;
+                scannerInput.focus();
+            }
+        }
 
-        input.addEventListener('change', (e) => {
-            const data = e.target.value;
-            if (data) {
-                score++;
-                scoreEl.innerText = score;
-                targetEl.innerText = "HIT: " + data;
-                
-                // 1. Recoil (Vibrate for 150ms)
-                if (navigator.vibrate) { navigator.vibrate(150); }
-
-                // 2. Visual Flash
-                document.body.classList.add('hit-flash');
-                setTimeout(() => document.body.classList.remove('hit-flash'), 100);
-
-                // 3. Audio (Optional: use any URL for a 'pew' sound)
-                // new Audio('pew.mp3').play();
-
-                e.target.value = ''; // Clear for next shot
+        gun.map().on((score, id) => {
+            if (score !== null) {
+                playerScores[id] = score;
+                renderBoard();
             }
         });
+
+        function renderBoard() {
+            board.innerHTML = '';
+            // THE GHOST BUSTER: Only show players who have at least 1 point
+            // This makes the 0-score junk from your screenshots disappear!
+            Object.keys(playerScores)
+                .filter(id => playerScores[id] > 0) 
+                .sort((a,b) => playerScores[b] - playerScores[a])
+                .forEach(id => {
+                    const isMe = id === myName ? "style='border: 2px solid #fff; box-shadow: 0 0 10px #0f0;'" : "";
+                    board.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span> <span>${playerScores[id]}</span></div>`;
+                });
+        }
+
+        function iScored() {
+            if (isResetting || !gameActive) return;
+            let current = playerScores[myName] || 0;
+            gun.get(myName).put(current + 1);
+            
+            document.body.classList.add('flash');
+            setTimeout(() => document.body.classList.remove('flash'), 100);
+        }
+
+        function resetScores() {
+            if (confirm("This will clear the screen for EVERYONE. Ready?")) {
+                isResetting = true;
+                
+                // Clear the cloud
+                Object.keys(playerScores).forEach(id => {
+                    gun.get(id).put(0);
+                });
+
+                // Force local clear so you see the result INSTANTLY
+                playerScores = {}; 
+                board.innerHTML = ''; 
+
+                setTimeout(() => { 
+                    isResetting = false; 
+                    scannerInput.focus(); 
+                }, 1000);
+            }
+        }
+
+        scannerInput.addEventListener('change', (e) => {
+            if (e.target.value.trim() !== "") {
+                iScored();
+                e.target.value = '';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "1" || e.key === "2" || e.key === "3") iScored();
+        });
+
+        setInterval(() => { 
+            if(gameActive && !isResetting && document.activeElement !== scannerInput) {
+                scannerInput.focus();
+            }
+        }, 1000);
     </script>
 </body>
 </html>
