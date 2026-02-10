@@ -10,10 +10,15 @@
         .flash { animation: flash-red 0.1s; }
         @keyframes flash-red { from { background: #500; } to { background: #000; } }
         
+        /* Status Light */
+        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; color: #555; }
+        #status-light { width: 12px; height: 12px; border-radius: 50%; background: grey; box-shadow: 0 0 5px #333; }
+
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; outline: none; }
         button.join-btn { background: #0f0; color: #000; border: none; padding: 15px 30px; margin-top: 20px; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
 
+        #game-ui { margin-top: 30px; }
         #reset-btn { background: #200; color: #f00; border: 1px solid #f00; padding: 10px; margin-top: 50px; cursor: pointer; font-size: 0.7rem; }
         #scanner { opacity: 0; position: absolute; z-index: -1; }
         .user-tag { color: #fff; font-size: 0.9rem; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
@@ -21,6 +26,11 @@
     </style>
 </head>
 <body>
+
+    <div id="status-container">
+        <span id="status-text">CONNECTING</span>
+        <div id="status-light"></div>
+    </div>
 
     <div id="login-screen">
         <h1>ZEBRA TAG</h1>
@@ -38,24 +48,41 @@
     <input type="text" id="scanner">
 
     <script>
-        // Added a backup relay for better sync across different devices
-        const gun = Gun([
+        const peers = [
             'https://gun-manhattan.herokuapp.com/gun',
             'https://p2p.xyz/gun'
-        ]).get('zebra-warehouse-v5');
-
+        ];
+        
+        const gun = Gun(peers).get('zebra-warehouse-v5');
         const scannerInput = document.getElementById('scanner');
         const board = document.getElementById('board');
+        const statusLight = document.getElementById('status-light');
+        const statusText = document.getElementById('status-text');
+        
         let playerScores = {};
         let myName = ""; 
         let isResetting = false;
         let gameActive = false;
 
-        // Check if user is already saved in this browser
+        // Status Monitoring Logic
+        // Gun.js doesn't have a simple 'onConnect', so we check for peer activity
+        setInterval(() => {
+            const mesh = gun.back('opt.mesh'); 
+            const connected = Object.values(mesh).some(peer => peer.readyState === 1 || peer.status === 'active');
+            
+            if (connected) {
+                statusLight.style.background = "#0f0";
+                statusLight.style.boxShadow = "0 0 10px #0f0";
+                statusText.innerText = "ONLINE";
+            } else {
+                statusLight.style.background = "#f00";
+                statusLight.style.boxShadow = "0 0 10px #f00";
+                statusText.innerText = "OFFLINE";
+            }
+        }, 3000);
+
         const savedName = localStorage.getItem('zebraUser');
-        if (savedName) {
-            bootGame(savedName);
-        }
+        if (savedName) bootGame(savedName);
 
         function joinGame() {
             const val = document.getElementById('username-input').value.trim().toUpperCase();
@@ -72,7 +99,7 @@
             document.getElementById('game-ui').style.display = 'block';
             document.getElementById('current-user').innerText = myName;
             
-            // Ensure we are in the cloud's player list
+            // Listen for our own updates
             gun.get(myName).on((score) => {
                 playerScores[myName] = score || 0;
                 renderBoard();
@@ -106,7 +133,6 @@
 
         function iScored() {
             if (isResetting || !gameActive) return;
-            // Fetch the latest score from our local object and push +1 to Gun
             let current = playerScores[myName] || 0;
             gun.get(myName).put(current + 1);
             
