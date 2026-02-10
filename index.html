@@ -1,70 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZEBRA TAG - V 0.1</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-    <input type="text" id="scanner" autocomplete="off" inputmode="text">
-
-    <div id="auth-screen" class="screen active">
-        <div class="flex-center">
-            <div class="box">
-                <h2 id="auth-title">ZEBRA TAG</h2>
-                <div id="reg-fields" style="display:none">
-                    <input type="text" id="username-input" placeholder="YOUR NAME">
-                </div>
-                <input type="email" id="email-input" placeholder="EMAIL" onkeydown="if(event.key==='Enter') handleAuth()">
-                <input type="password" id="pass-input" placeholder="PASSWORD" onkeydown="if(event.key==='Enter') handleAuth()">
-                <button class="btn" onclick="handleAuth()">ENTER</button>
-                <div onclick="toggleAuth()" style="cursor:pointer; font-size:0.75rem; color: var(--gray); margin-top:20px;">NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span></div>
+<div id="auth-screen" class="screen active">
+    <div class="flex-center">
+        <div class="box">
+            <h2 id="auth-title">ZEBRA TAG</h2>
+            <div id="reg-fields" style="display:none">
+                <input type="text" id="username-input" placeholder="YOUR NAME">
+            </div>
+            <input type="email" id="email-input" placeholder="EMAIL" onkeydown="if(event.key==='Enter') handleAuth()">
+            <input type="password" id="pass-input" placeholder="PASSWORD" onkeydown="if(event.key==='Enter') handleAuth()">
+            <button class="btn" onclick="handleAuth()">ENTER</button>
+            
+            <div style="font-size:0.75rem; color: var(--gray); margin-top:20px;">
+                <span onclick="toggleAuth()" style="cursor:pointer;">NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span></span>
+                <span style="margin: 0 10px;">|</span>
+                <span onclick="forgotPassword()" style="cursor:pointer; color: var(--red)">FORGOT PASSWORD?</span>
             </div>
         </div>
     </div>
-
-    <div id="lobby-screen" class="screen">
-        <div class="flex-center">
-            <div class="box">
-                <h2>LOBBY</h2>
-                <input type="text" id="store-input" placeholder="ROOM ID" onkeydown="if(event.key==='Enter') joinStore()">
-                <button class="btn" onclick="joinStore()">JOIN ROOM</button>
-                <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="game-screen" class="screen">
-        <div class="top-nav">
-            <span id="store-display" style="font-size: 0.7rem; color: var(--gray);">ST: ---</span>
-            <div class="status-pill"><div class="dot" id="status-dot"></div> CONNECTED</div>
-            <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-size: 0.7rem; font-weight: bold;">EXIT</span>
-        </div>
-        <div id="game-content" class="flex-center" style="justify-content: flex-start;">
-            <div id="hero-zone">
-                <div id="op-name">---</div>
-                <div style="height: 20px;"></div>
-                <div class="score-label">SCORE :</div>
-                <div id="my-count" onclick="focusScanner()">0</div>
-                <div id="scan-btn" class="scan-toggle" onclick="toggleAutoScan()">SCANNER: OFF</div>
-                <br><br>
-                <div class="reset-link" onclick="resetMyScore()">Reset My Count</div>
-            </div>
-            <div id="leaderboard-wrap">
-                <div style="color:var(--gray); font-size:0.7rem; letter-spacing:2px; margin-bottom:15px;">RANKINGS</div>
-                <div id="leaderboard-content"></div>
-                <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE DATA</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+</div>
