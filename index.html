@@ -3,31 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZEBRA TAG - V5 PRO</title>
-    
+    <title>ZEBRA TAG - STORE EDITION</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    
     <style>
         :root { --neon: #0f0; --dark: #000; --panel: #111; --red: #f44; }
-        body { background: var(--dark); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; padding: 0; text-align: center; overflow-x: hidden; }
-
+        body { background: var(--dark); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; padding: 0; text-align: center; }
         #login-screen { position: fixed; inset: 0; background: var(--dark); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .login-box { width: 85%; max-width: 400px; padding: 30px; border: 2px solid var(--neon); background: #000; }
-        input { background: #000; color: var(--neon); border: 1px solid var(--neon); padding: 15px; font-size: 1.1rem; text-align: center; width: 100%; margin-bottom: 20px; box-sizing: border-box; }
-        .action-btn { padding: 18px; background: var(--neon); color: #000; border: none; font-weight: bold; font-size: 1rem; width: 100%; cursor: pointer; }
-        .toggle-link { margin-top: 15px; font-size: 0.8rem; color: #888; text-decoration: underline; cursor: pointer; display: block; }
-
+        input { background: #000; color: var(--neon); border: 1px solid var(--neon); padding: 12px; font-size: 1rem; text-align: center; width: 100%; margin-bottom: 15px; box-sizing: border-box; }
+        .action-btn { padding: 18px; background: var(--neon); color: #000; border: none; font-weight: bold; width: 100%; cursor: pointer; }
         #personal-zone { position: sticky; top: 0; background: var(--dark); border-bottom: 2px solid var(--neon); padding: 20px 10px; z-index: 100; }
-        #my-count { font-size: 7rem; font-weight: 900; margin: 5px 0; line-height: 1; cursor: pointer; }
-        .logout-link { position: absolute; top: 15px; right: 15px; color: var(--red); font-size: 0.7rem; cursor: pointer; border: 1px solid var(--red); padding: 5px 10px; }
-
-        #leaderboard-zone { padding: 20px 10px 100px 10px; }
-        .row { background: var(--panel); border: 1px solid #222; padding: 15px; display: flex; justify-content: space-between; font-size: 1.4rem; border-radius: 8px; margin-bottom: 10px; }
-        .me-highlight { border: 1px solid var(--neon); background: #1a1a1a; color: #fff; }
-        .reset-btn { display: none; background: #200; color: #f44; border: 1px solid #f44; padding: 10px; margin-top: 50px; cursor: pointer; }
-
+        #my-count { font-size: 7rem; font-weight: 900; margin: 5px 0; cursor: pointer; }
+        .row { background: var(--panel); border: 1px solid #222; padding: 15px; display: flex; justify-content: space-between; margin: 10px; border-radius: 8px; }
+        .me-highlight { border: 1px solid var(--neon); color: #fff; }
+        .reset-btn { display: none; background: #200; color: #f44; border: 1px solid #f44; padding: 10px; margin: 20px; cursor: pointer; }
         #scanner { position: fixed; top: -100px; opacity: 0; }
     </style>
 </head>
@@ -36,99 +27,108 @@
     <div id="login-screen">
         <div class="login-box">
             <h1 id="auth-title">SYSTEM LOGIN</h1>
+            
+            <span style="font-size: 0.7rem;">STORE ID (Shared with your team)</span>
+            <input type="text" id="store-id-input" placeholder="e.g. STORE_105">
+
             <div id="user-field-wrap" style="display: none;">
-                <input type="text" id="username-input" placeholder="USERNAME">
+                <input type="text" id="username-input" placeholder="YOUR NAME">
             </div>
+
             <input type="email" id="email-input" placeholder="EMAIL">
             <input type="password" id="pass-input" placeholder="PASSWORD">
+            
             <button class="action-btn" onclick="handleAuth()">CONTINUE</button>
-            <div class="toggle-link" onclick="toggleAuthMode()">Toggle Login/Register</div>
+            <div style="margin-top:15px; cursor:pointer; text-decoration:underline; font-size:0.8rem;" onclick="toggleAuthMode()">Register / Login</div>
         </div>
     </div>
 
     <div id="personal-zone">
-        <div class="logout-link" onclick="handleSignOut()">Log Out</div>
+        <div style="position: absolute; top: 10px; left: 10px; font-size: 0.6rem;" id="display-store">STORE: ---</div>
+        <div style="position: absolute; top: 10px; right: 10px; font-size: 0.6rem; color: var(--red);" onclick="handleSignOut()">LOGOUT</div>
         <div id="op-name">---</div>
         <div id="my-count" onclick="iScored()">0</div>
     </div>
 
-    <div id="leaderboard-zone">
-        <div id="leaderboard-content"></div>
-        <button id="admin-reset-button" class="reset-btn" onclick="resetScores()">WIPE ALL DATA</button>
-    </div>
-
+    <div id="leaderboard-content"></div>
+    <button id="admin-reset-button" class="reset-btn" onclick="resetScores()">WIPE STORE DATA</button>
     <input type="text" id="scanner">
 
     <script>
-        // 1. DEFINE FUNCTIONS FIRST so they exist when the buttons look for them
-        function toggleAuthMode() {
-            const wrap = document.getElementById('user-field-wrap');
-            const title = document.getElementById('auth-title');
-            if (wrap.style.display === 'none') {
-                wrap.style.display = 'block';
-                title.innerText = "CREATE ACCOUNT";
-            } else {
-                wrap.style.display = 'none';
-                title.innerText = "SYSTEM LOGIN";
-            }
-        }
-
-        async function handleAuth() {
-            const email = document.getElementById('email-input').value;
-            const pass = document.getElementById('pass-input').value;
-            const user = document.getElementById('username-input').value;
-            const isRegister = document.getElementById('user-field-wrap').style.display === 'block';
-
-            try {
-                if (isRegister) {
-                    const res = await firebase.auth().createUserWithEmailAndPassword(email, pass);
-                    await firebase.database().ref('users/' + res.user.uid).set({ name: user.toUpperCase() });
-                } else {
-                    await firebase.auth().signInWithEmailAndPassword(email, pass);
-                }
-            } catch (e) { alert(e.message); }
-        }
-
-        function handleSignOut() { firebase.auth().signOut().then(() => location.reload()); }
-
-        function iScored() {
-            const uid = firebase.auth().currentUser.uid;
-            const name = document.getElementById('op-name').innerText.replace("OPERATOR: ", "");
-            firebase.database().ref('scores/' + uid).transaction(c => {
-                return c ? { name: name, score: c.score + 1 } : { name: name, score: 1 };
-            });
-        }
-
-        function resetScores() {
-            if(confirm("WIPE EVERYTHING?")) {
-                firebase.database().ref('scores').remove();
-            }
-        }
-
-        // 2. INITIALIZE FIREBASE
+        // 1. INIT
         const firebaseConfig = {
             apiKey: "AIzaSyDFIuHkzGlTNn20-2hVyQUwaKXyqZ9kPRc",
             projectId: "zebratagpro",
             databaseURL: "https://zebratagpro-default-rtdb.firebaseio.com/"
         };
         firebase.initializeApp(firebaseConfig);
-
         const ADMIN_UID = "VhP6eNFlJBRmtpwyDCVp2GLIs9g2";
+        let currentStoreID = "";
 
-        // 3. APP LOGIC
+        // 2. AUTH
+        function toggleAuthMode() {
+            const wrap = document.getElementById('user-field-wrap');
+            document.getElementById('auth-title').innerText = (wrap.style.display === 'none') ? "CREATE ACCOUNT" : "SYSTEM LOGIN";
+            wrap.style.display = (wrap.style.display === 'none') ? 'block' : 'none';
+        }
+
+        async function handleAuth() {
+            const storeId = document.getElementById('store-id-input').value.trim().toUpperCase();
+            const email = document.getElementById('email-input').value;
+            const pass = document.getElementById('pass-input').value;
+            const name = document.getElementById('username-input').value;
+            const isReg = document.getElementById('user-field-wrap').style.display === 'block';
+
+            if(!storeId) return alert("Enter a Store ID!");
+
+            try {
+                let res;
+                if (isReg) {
+                    res = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+                    await firebase.database().ref('users/' + res.user.uid).set({ name: name.toUpperCase(), storeId: storeId });
+                } else {
+                    res = await firebase.auth().signInWithEmailAndPassword(email, pass);
+                    // Update store link in case they changed phones
+                    await firebase.database().ref('users/' + res.user.uid + '/storeId').set(storeId);
+                }
+            } catch (e) { alert(e.message); }
+        }
+
+        function handleSignOut() { firebase.auth().signOut().then(() => location.reload()); }
+
+        // 3. CORE LOGIC
+        function iScored() {
+            const user = firebase.auth().currentUser;
+            const name = document.getElementById('op-name').innerText.replace("OPERATOR: ", "");
+            if(!currentStoreID) return;
+            
+            firebase.database().ref(`stores/${currentStoreID}/scores/${user.uid}`).transaction(c => {
+                return c ? { name: name, score: c.score + 1 } : { name: name, score: 1 };
+            });
+        }
+
+        function resetScores() {
+            if(confirm(`Wipe all data for ${currentStoreID}?`)) {
+                firebase.database().ref(`stores/${currentStoreID}/scores`).remove();
+            }
+        }
+
         firebase.auth().onAuthStateChanged(async user => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
                 
-                const snap = await firebase.database().ref('users/' + user.uid + '/name').get();
-                const myName = snap.val() || user.email.split('@')[0].toUpperCase();
-                document.getElementById('op-name').innerText = "OPERATOR: " + myName;
+                // Get User Info
+                const userSnap = await firebase.database().ref('users/' + user.uid).get();
+                const userData = userSnap.val() || {};
+                currentStoreID = userData.storeId || "GLOBAL";
+                
+                document.getElementById('op-name').innerText = "OPERATOR: " + (userData.name || "USER");
+                document.getElementById('display-store').innerText = "STORE: " + currentStoreID;
 
-                if (user.uid === ADMIN_UID) {
-                    document.getElementById('admin-reset-button').style.display = 'block';
-                }
+                if (user.uid === ADMIN_UID) document.getElementById('admin-reset-button').style.display = 'block';
 
-                firebase.database().ref('scores').on('value', s => {
+                // Listen to THIS STORE ONLY
+                firebase.database().ref(`stores/${currentStoreID}/scores`).on('value', s => {
                     const data = s.val() || {};
                     document.getElementById('my-count').innerText = data[user.uid] ? data[user.uid].score : 0;
                     
