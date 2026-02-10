@@ -37,8 +37,7 @@
     <input type="text" id="scanner">
 
     <script>
-        // Using a unique key for your warehouse session
-        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']).get('zebra-warehouse-final');
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']).get('zebra-warehouse-v4');
         const scannerInput = document.getElementById('scanner');
         const board = document.getElementById('board');
         let playerScores = {};
@@ -67,8 +66,7 @@
 
         function renderBoard() {
             board.innerHTML = '';
-            // THE GHOST BUSTER: Only show players who have at least 1 point
-            // This makes the 0-score junk from your screenshots disappear!
+            // GHOST BUSTER: Only show players with more than 0 points
             Object.keys(playerScores)
                 .filter(id => playerScores[id] > 0) 
                 .sort((a,b) => playerScores[b] - playerScores[a])
@@ -88,18 +86,15 @@
         }
 
         function resetScores() {
-            if (confirm("This will clear the screen for EVERYONE. Ready?")) {
+            if (confirm("Reset everything?")) {
                 isResetting = true;
-                
-                // Clear the cloud
+                // Tell the cloud to set everyone to 0
                 Object.keys(playerScores).forEach(id => {
                     gun.get(id).put(0);
                 });
-
-                // Force local clear so you see the result INSTANTLY
+                // Clear local view immediately
                 playerScores = {}; 
                 board.innerHTML = ''; 
-
                 setTimeout(() => { 
                     isResetting = false; 
                     scannerInput.focus(); 
@@ -114,8 +109,12 @@
             }
         });
 
+        // SPACEBAR TEST ONLY
         document.addEventListener('keydown', (e) => {
-            if (e.key === "1" || e.key === "2" || e.key === "3") iScored();
+            if (e.code === "Space") {
+                e.preventDefault(); // Stop page from scrolling
+                iScored();
+            }
         });
 
         setInterval(() => { 
