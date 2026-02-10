@@ -1,141 +1,210 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ZEBRA TAG - PRO EDITION</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZEBRA TAG - V5 PRO</title>
+    
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; transition: background 0.1s; }
-        #status-container { position: fixed; top: 10px; right: 10px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; z-index: 1000; }
-        .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
-        #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        .description { color: #888; font-size: 0.9rem; max-width: 320px; margin-bottom: 25px; line-height: 1.4; }
-        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; outline: none; }
-        #scanner { position: absolute; left: -9999px; opacity: 0; }
-        button { background: #0f0; color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; }
-        #operator-display { color: white; margin-bottom: 20px; font-size: 1.2rem; }
-        .invalid-flash { background: #300 !important; }
+        :root { --neon: #0f0; --dark: #000; --panel: #111; --red: #f44; }
+        body { background: var(--dark); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; padding: 0; text-align: center; overflow-x: hidden; }
+
+        /* --- LOGIN UI --- */
+        #login-screen { position: fixed; inset: 0; background: var(--dark); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; }
+        .login-box { width: 85%; max-width: 400px; padding: 30px; border: 2px solid var(--neon); background: rgba(0, 20, 0, 0.9); box-shadow: 0 0 20px rgba(0,255,0,0.3); }
+        .login-box h1 { font-size: 1.8rem; letter-spacing: 3px; margin-bottom: 25px; }
+        .field-label { text-align: left; display: block; font-size: 0.7rem; margin-bottom: 5px; color: #fff; }
+        input { background: #000; color: var(--neon); border: 1px solid var(--neon); padding: 15px; font-size: 1.1rem; text-align: center; width: 100%; margin-bottom: 20px; box-sizing: border-box; outline: none; }
+        .action-btn { padding: 18px; background: var(--neon); color: #000; border: none; font-weight: bold; font-size: 1rem; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
+        .toggle-link { margin-top: 15px; font-size: 0.8rem; color: #888; text-decoration: underline; cursor: pointer; }
+
+        /* --- DASHBOARD UI --- */
+        #personal-zone { position: sticky; top: 0; background: var(--dark); border-bottom: 2px solid var(--neon); padding: 20px 10px; z-index: 100; }
+        
+        /* Added cursor pointer so users know they can click the number to test */
+        #my-count { font-size: 7rem; font-weight: 900; margin: 5px 0; line-height: 1; cursor: pointer; user-select: none; }
+        
+        .logout-link { position: absolute; top: 15px; right: 15px; color: var(--red); font-size: 0.7rem; cursor: pointer; border: 1px solid var(--red); padding: 5px 10px; text-transform: uppercase; }
+
+        #leaderboard-zone { padding: 20px 10px 100px 10px; }
+        .row { background: var(--panel); border: 1px solid #222; padding: 15px; display: flex; justify-content: space-between; font-size: 1.4rem; border-radius: 8px; margin-bottom: 10px; }
+        .me-highlight { border: 1px solid var(--neon); background: #1a1a1a; color: #fff; }
+        .reset-btn { background: #200; color: #622; border: none; padding: 10px; margin-top: 50px; cursor: pointer; }
+
+        #scanner { position: fixed; top: -100px; opacity: 0; }
+        .flash { animation: flashEffect 0.1s; }
+        @keyframes flashEffect { from { background: #050; } to { background: #000; } }
     </style>
 </head>
 <body>
 
-    <div id="status-container">NETWORK: <span id="status-text" style="color:orange">CONNECTING...</span></div>
-
     <div id="login-screen">
-        <h1>ZEBRA TAG PRO</h1>
-        <div class="description">
-            Scan official <b>SHP</b> stickers to log progress. Press [SPACE] for manual override.
+        <div class="login-box">
+            <h1 id="auth-title">SYSTEM LOGIN</h1>
+            
+            <div id="user-field-wrap" style="display: none;">
+                <span class="field-label">USERNAME (LEADERBOARD)</span>
+                <input type="text" id="username-input" placeholder="e.g. WAREHOUSE_BOSS">
+            </div>
+
+            <span class="field-label">WORK EMAIL</span>
+            <input type="email" id="email-input" placeholder="name@work.com">
+            
+            <span class="field-label">PASSWORD (6+ CHARS)</span>
+            <input type="password" id="pass-input" placeholder="******">
+            
+            <button class="action-btn" id="auth-btn" onclick="handleAuth()">SIGN IN</button>
+            
+            <div class="toggle-link" id="auth-toggle" onclick="toggleAuthMode()">New? Create Account</div>
+            <div class="toggle-link" style="color:#444; margin-top:10px;" onclick="forgotPassword()">Forgot Password?</div>
         </div>
-        <input type="text" id="username-input" placeholder="OPERATOR NAME..." autocomplete="off">
-        <button onclick="joinGame()" style="margin-top: 20px;">START ENGINE</button>
     </div>
 
-    <div id="game-ui" style="display:none;">
-        <div id="operator-display"></div>
-        <div id="board"></div>
-        <button onclick="resetScores()" style="background:red; color:white; margin-top:40px; font-size: 0.7rem;">WIPE GLOBAL DATA</button>
+    <div id="personal-zone">
+        <div class="logout-link" onclick="handleSignOut()">Log Out</div>
+        <div id="op-name" style="color:#fff; font-size: 1rem;">---</div>
+        <div id="my-count" onclick="iScored()">0</div>
+        <div style="font-size: 0.7rem; color: #444;">SCAN OR [SPACE] TO TEST</div>
+    </div>
+
+    <div id="leaderboard-zone">
+        <div id="leaderboard-content"></div>
+        <button class="reset-btn" onclick="resetScores()">WIPE ALL DATA</button>
     </div>
 
     <input type="text" id="scanner">
 
     <script>
-        // 2. YOUR FIREBASE KEYS (Plugged in for you!)
         const firebaseConfig = {
             apiKey: "AIzaSyDFIuHkzGlTNn20-2hVyQUwaKXyqZ9kPRc",
-            authDomain: "zebratagpro.firebaseapp.com",
             projectId: "zebratagpro",
-            databaseURL: "https://zebratagpro-default-rtdb.firebaseio.com/", // Verify this in your console!
-            storageBucket: "zebratagpro.firebasestorage.app",
-            messagingSenderId: "202574491794",
-            appId: "1:202574491794:web:a29bdf5a66f44a1cd1764b"
+            databaseURL: "https://zebratagpro-default-rtdb.firebaseio.com/"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
         
-        let myName = localStorage.getItem('zebraUser') || "";
-        let gameStarted = false; 
+        let myUID = "";
+        let myDisplayName = "";
+        let isSignUpMode = false;
+        const scn = document.getElementById('scanner');
 
-        document.getElementById('username-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') joinGame();
-        });
-
-        async function joinGame() {
-            const val = document.getElementById('username-input').value.trim().toUpperCase();
-            if (val) {
-                localStorage.setItem('zebraUser', val);
-                myName = val;
-                bootGame();
-            } else { alert("Enter Name"); }
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById('auth-title').innerText = isSignUpMode ? "CREATE ACCOUNT" : "SYSTEM LOGIN";
+            document.getElementById('auth-btn').innerText = isSignUpMode ? "REGISTER" : "SIGN IN";
+            document.getElementById('auth-toggle').innerText = isSignUpMode ? "Back to Login" : "New? Create Account";
+            document.getElementById('user-field-wrap').style.display = isSignUpMode ? "block" : "none";
         }
 
-        function bootGame() {
-            gameStarted = true; 
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('operator-display').innerText = "OPERATOR: " + myName;
-            document.getElementById('status-text').innerText = "ONLINE";
-            document.getElementById('status-text').style.color = "#0f0";
+        async function handleAuth() {
+            const email = document.getElementById('email-input').value.trim();
+            const pass = document.getElementById('pass-input').value;
+            const chosenName = document.getElementById('username-input').value.trim().toUpperCase();
 
-            // REAL-TIME LISTENER: Updates board whenever ANYONE scans
-            db.ref('scores').on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                render(data);
+            if (!email.includes('@')) return alert("Enter valid email!");
+            if (pass.length < 6) return alert("Password must be 6+ characters!");
+            if (isSignUpMode && !chosenName) return alert("Please enter a username!");
+
+            try {
+                if (isSignUpMode) {
+                    const res = await auth.createUserWithEmailAndPassword(email, pass);
+                    await db.ref('users/' + res.user.uid).set({ name: chosenName });
+                    startApp(res.user, chosenName);
+                } else {
+                    const res = await auth.signInWithEmailAndPassword(email, pass);
+                    const nameSnap = await db.ref('users/' + res.user.uid + '/name').get();
+                    const name = nameSnap.val() || email.split('@')[0].toUpperCase();
+                    startApp(res.user, name);
+                }
+            } catch (err) { alert("ERROR: " + err.message); }
+        }
+
+        function handleSignOut() {
+            if(confirm("Sign out?")) auth.signOut().then(() => location.reload());
+        }
+
+        function forgotPassword() {
+            const email = document.getElementById('email-input').value.trim();
+            if (!email) return alert("Enter email first!");
+            auth.sendPasswordResetEmail(email).then(() => alert("Reset link sent!"));
+        }
+
+        function startApp(user, name) {
+            myUID = user.uid;
+            myDisplayName = name;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('op-name').innerText = "OPERATOR: " + myDisplayName;
+
+            db.ref('scores').off(); 
+            db.ref('scores').on('value', (snap) => {
+                renderBoard(snap.val() || {});
             });
-            
-            setTimeout(() => document.getElementById('scanner').focus(), 500);
+            refocus();
+        }
+
+        function renderBoard(allData) {
+            const myEntry = allData[myUID];
+            document.getElementById('my-count').innerText = myEntry ? myEntry.score : 0;
+            const board = document.getElementById('leaderboard-content');
+            board.innerHTML = '';
+            const sorted = Object.keys(allData).sort((a,b) => (allData[b].score || 0) - (allData[a].score || 0));
+            sorted.forEach((uid, i) => {
+                const isMe = uid === myUID ? 'me-highlight' : '';
+                board.innerHTML += `<div class="row ${isMe}"><span>#${i+1} ${allData[uid].name}</span><span>${allData[uid].score}</span></div>`;
+            });
         }
 
         function iScored() {
-            // Uses a 'transaction' to ensure counts don't get messed up if two people scan at once
-            db.ref('scores/' + myName).transaction((current) => {
-                return (current || 0) + 1;
+            if(!myUID) return;
+            db.ref('scores/' + myUID).transaction(c => {
+                if (c) return { name: myDisplayName, score: c.score + 1 };
+                return { name: myDisplayName, score: 1 };
             });
-
-            // FEEDBACK
-            if (navigator.vibrate) navigator.vibrate(200); 
-            document.body.style.background = "#030";
-            setTimeout(() => document.body.style.background = "#000", 100);
+            document.body.classList.add('flash');
+            setTimeout(() => document.body.classList.remove('flash'), 100);
+            if(navigator.vibrate) navigator.vibrate(80);
         }
 
-        function render(playerScores) {
-            const b = document.getElementById('board');
-            b.innerHTML = '';
-            const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
-            sorted.forEach(id => {
-                const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
-                b.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span><span>${playerScores[id]}</span></div>`;
-            });
-        }
-
-        function resetScores() {
-            if(confirm("Wipe all scores globally?")) {
-                db.ref('scores').remove();
+        // KEYBOARD TRIGGER (Space Bar)
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('login-screen').style.display === 'none') {
+                if (e.code === "Space") {
+                    e.preventDefault(); 
+                    iScored();
+                }
             }
-        }
-
-        // SCANNER LOGIC
-        document.addEventListener('keydown', (e) => { 
-            if(!gameStarted) return; 
-            if(e.code === "Space") { e.preventDefault(); iScored(); }
-            document.getElementById('scanner').focus(); 
         });
 
-        document.getElementById('scanner').addEventListener('change', (e) => { 
-            const val = e.target.value.trim().toUpperCase();
-            if(val.startsWith("SHP")) { 
-                iScored(); 
-            } else if (val !== "") {
-                document.body.classList.add('invalid-flash');
-                setTimeout(() => document.body.classList.remove('invalid-flash'), 100);
-            }
-            e.target.value = ''; 
+        function refocus() { 
+            if (document.getElementById('login-screen').style.display === 'none') scn.focus(); 
+        }
+
+        scn.addEventListener('change', (e) => {
+            if(e.target.value.toUpperCase().startsWith("SHP")) iScored();
+            e.target.value = '';
+            refocus();
         });
 
-        setInterval(() => { if(gameStarted) document.getElementById('scanner').focus(); }, 1000);
-        if(myName) bootGame();
+        document.addEventListener('mousedown', refocus);
+        document.addEventListener('touchstart', refocus);
+        setInterval(refocus, 500);
+
+        function resetScores() { if(confirm("WIPE ALL?")) db.ref('scores').remove(); }
+
+        auth.onAuthStateChanged(async user => { 
+            if(user) {
+                const nameSnap = await db.ref('users/' + user.uid + '/name').get();
+                startApp(user, nameSnap.val() || user.email.split('@')[0].toUpperCase());
+            } else {
+                document.getElementById('login-screen').style.display = 'flex';
+            }
+        });
     </script>
 </body>
 </html>
