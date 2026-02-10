@@ -15,12 +15,11 @@ If you do not already have an account, please create one! It’s easy and free a
 
 After creating an account, sign in and do one of two things ;
 
-1. if you want to “host” come up with a room code i.e. ; room , 4, cat, 3257. It could literally be anything. And then you are in the lobby! 
+A. if you want to “host” come up with a room code i.e. ; room , 4, cat, 3257. It could literally be anything. And then you are in the lobby! 
 
-      Or
  
 
-2. If you want to “join” just enter your friends ROOM ID in the top left of their screen or they can verbally tell you, whatever works. 
+B. If you want to “join” just enter your friends ROOM ID in the top left of their screen or they can verbally tell you, whatever works. 
 
 
 And that’s all you need to do to join your friends and start playing laser tag! 
