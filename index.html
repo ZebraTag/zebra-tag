@@ -1,6 +1,161 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>ZEBRA TAG v14 - THE RELOAD</title>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
+        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; }
+        #status-light { width: 10px; height: 10px; border-radius: 50%; background: grey; }
+        .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
+        #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; }
+        #scanner { position: absolute; left: -9999px; opacity: 0; }
+        .admin-btn { background: #200; color: #f00; border: 1px solid #f00; padding: 10px; margin-top: 40px; cursor: pointer; font-size: 0.8rem; }
+        #debug-log { font-size: 0.6rem; color: #444; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="status-container"><span id="status-text">INIT...</span><div id="status-light"></div></div>
+
+    <div id="login-screen">
+        <h1>ZEBRA TAG ONLINE</h1>
+        <input type="text" id="username-input" placeholder="OPERATOR NAME...">
+        <button onclick="joinGame()" style="background:#0f0; padding:15px 40px; margin-top:20px; font-weight:bold; cursor:pointer;">START</button>
+    </div>
+
+    <div id="game-ui" style="display:none;">
+        <div id="operator-tag" style="color:white; margin-bottom:20px;"></div>
+        <div id="board"></div>
+        
+        <button class="admin-btn" onclick="resetScores()">WIPE ALL SCORES</button>
+        
+        <div id="debug-log">Log: System starting...</div>
+    </div>
+
+    <input type="text" id="scanner">
+
+    <script>
+        // AGGRESSIVE PEER LIST: Trying 5 different entry points
+        const gun = Gun({
+            peers: [
+                'https://p2p.xyz/gun',
+                'https://gun-manhattan.herokuapp.com/gun',
+                'https://gun-us-west.herokuapp.com/gun',
+                'https://peer.wall.org/gun',
+                'https://dletta.com/gun'
+            ],
+            localStorage: true,
+            retry: 1000 
+        });
+
+        const lobby = gun.get('zebra_v14_final');
+        
+        let myName = localStorage.getItem('zebraUser') || "";
+        let playerScores = {};
+
+        function log(msg) { document.getElementById('debug-log').innerText = "Log: " + msg; }
+
+        // Status Monitor: Checks connections every 2 seconds
+        setInterval(() => {
+            const peers = gun.back('opt.peers');
+            let connected = false;
+            Object.keys(peers).forEach(id => {
+                if(peers[id].wire && peers[id].wire.readyState === 1) connected = true;
+            });
+            document.getElementById('status-light').style.background = connected ? "#0f0" : "#f00";
+            document.getElementById('status-text').innerText = connected ? "ONLINE" : "OFFLINE";
+        }, 2000);
+
+        if (myName) bootGame(myName);
+
+        function joinGame() {
+            const val = document.getElementById('username-input').value.trim().toUpperCase();
+            if (val.length > 0) {
+                localStorage.setItem('zebraUser', val);
+                bootGame(val);
+            } else {
+                alert("Please enter a name!");
+            }
+        }
+
+        function bootGame(name) {
+            myName = name;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('operator-tag').innerText = "OPERATOR: " + myName;
+            log("Booted as " + myName);
+
+            // Listen for data from other players
+            lobby.map().on((score, id) => {
+                if (id && id !== 'undefined' && id !== 'null') {
+                    playerScores[id] = score;
+                    renderBoard();
+                }
+            });
+
+            // Handshake: Announce our score (even if 0) to force a network sync
+            lobby.get(myName).put(playerScores[myName] || 0);
+            document.getElementById('scanner').focus();
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
+            
+            sorted.forEach(id => {
+                if(playerScores[id] > 0 || id === myName) {
+                    const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
+                    board.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span><span>${playerScores[id]}</span></div>`;
+                }
+            });
+        }
+
+        function iScored() {
+            let current = (playerScores[myName] || 0);
+            lobby.get(myName).put(current + 1);
+            log("Scored! Total: " + (current + 1));
+            document.body.style.background = "#030";
+            setTimeout(() => document.body.style.background = "#000", 100);
+        }
+
+        function resetScores() {
+            if(confirm("Wipe all data for everyone?")) {
+                Object.keys(playerScores).forEach(id => {
+                    lobby.get(id).put(0);
+                });
+                playerScores = {};
+                renderBoard();
+                log("Data wiped.");
+            }
+        }
+
+        // Keyboard and Scanner Controls
+        document.addEventListener('keydown', (e) => {
+            if(e.code === "Space") { e.preventDefault(); iScored(); }
+            document.getElementById('scanner').focus();
+        });
+
+        document.getElementById('scanner').addEventListener('change', (e) => {
+            if(e.target.value.trim()) {
+                iScored();
+                e.target.value = '';
+            }
+        });
+
+        // Keep focus on the invisible scanner input
+        setInterval(() => {
+            if(document.getElementById('game-ui').style.display === 'block') {
+                document.getElementById('scanner').focus();
+            }
+        }, 1000);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html>
+<head>
     <title>ZEBRA TAG v13 - THE RELOAD</title>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
