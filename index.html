@@ -1,68 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ZEBRA TAG v10</title>
+    <title>ZEBRA TAG v12 - FINAL FIX</title>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
-        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; z-index: 1000; }
-        #status-light { width: 10px; height: 10px; border-radius: 50%; background: grey; transition: 0.3s; }
-        .leaderboard { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
-        .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; }
+        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; }
+        #status-light { width: 10px; height: 10px; border-radius: 50%; background: grey; }
+        .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
         #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; }
-        button.join-btn { background: #0f0; color: #000; border: none; padding: 15px 30px; margin-top: 20px; font-weight: bold; cursor: pointer; }
         #scanner { position: absolute; left: -9999px; opacity: 0; }
     </style>
 </head>
 <body>
 
-    <div id="status-container">
-        <span id="status-text">CONNECTING</span>
-        <div id="status-light"></div>
-    </div>
+    <div id="status-container"><span id="status-text">CONNECTING</span><div id="status-light"></div></div>
 
     <div id="login-screen">
         <h1>ZEBRA TAG</h1>
         <input type="text" id="username-input" placeholder="NAME...">
-        <button class="join-btn" onclick="joinGame()">START ENGINE</button>
+        <button onclick="joinGame()" style="background:#0f0; padding:15px; margin-top:20px; font-weight:bold;">START</button>
     </div>
 
     <div id="game-ui" style="display:none;">
-        <div style="color:#fff; margin-bottom:10px;">OPERATOR: <span id="current-user" style="color:#0f0"></span></div>
-        <div id="board" class="leaderboard"></div>
-        <button onclick="resetScores()" style="background:#200; color:red; margin-top:50px; border:1px solid red; font-size:10px; padding:5px;">WIPE DATA</button>
+        <div id="board"></div>
+        <input type="text" id="scanner">
     </div>
 
-    <input type="text" id="scanner">
-
     <script>
-        // Using the most reliable public relay
-        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-        const lobby = gun.get('zebra_final_v10');
-
-        const statusLight = document.getElementById('status-light');
-        const statusText = document.getElementById('status-text');
-        let playerScores = {};
+        // Use multiple peers so if Manhattan is down, it uses another
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://p2p.xyz/gun']);
+        const lobby = gun.get('zebra_production_v12');
         let myName = localStorage.getItem('zebraUser') || "";
+        let playerScores = {};
 
-        // Status Check
+        // Status Monitor (Runs every 2 seconds)
         setInterval(() => {
-            const connected = gun.back('opt.peers');
-            let isUp = false;
-            Object.keys(connected).forEach(id => {
-                if(connected[id].wire && connected[id].wire.readyState === 1) isUp = true;
-            });
-            statusLight.style.background = isUp ? "#0f0" : "#f00";
-            statusLight.style.boxShadow = isUp ? "0 0 10px #0f0" : "0 0 10px #f00";
-            statusText.innerText = isUp ? "ONLINE" : "OFFLINE";
+            const peers = gun.back('opt.peers');
+            let connected = Object.values(peers).some(p => p.wire && p.wire.readyState === 1);
+            document.getElementById('status-light').style.background = connected ? "#0f0" : "#f00";
+            document.getElementById('status-text').innerText = connected ? "ONLINE" : "OFFLINE";
         }, 2000);
 
         if (myName) bootGame(myName);
 
         function joinGame() {
             const val = document.getElementById('username-input').value.trim().toUpperCase();
-            if (val) {
+            if (val && val.length > 0) { // Fixes "0 length key" error
                 localStorage.setItem('zebraUser', val);
                 bootGame(val);
             }
@@ -72,59 +57,34 @@
             myName = name;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('current-user').innerText = myName;
-
+            
             lobby.map().on((score, id) => {
-                if (score !== null) {
+                if (id && id !== 'undefined') {
                     playerScores[id] = score;
-                    renderBoard();
+                    render();
                 }
             });
-
-            // Initial ping
+            // Send a ping so the network sees us
             lobby.get(myName).put(playerScores[myName] || 0);
-            document.getElementById('scanner').focus();
         }
 
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            Object.keys(playerScores)
-                .filter(id => playerScores[id] > 0 || id === myName)
-                .sort((a,b) => playerScores[b] - playerScores[a])
-                .forEach(id => {
-                    const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
-                    board.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span> <span>${playerScores[id]}</span></div>`;
-                });
+        function render() {
+            const b = document.getElementById('board');
+            b.innerHTML = `<div style="color:white;margin-bottom:20px;">OPERATOR: ${myName}</div>`;
+            Object.keys(playerScores).sort((a,b)=>playerScores[b]-playerScores[a]).forEach(id => {
+                b.innerHTML += `<div class="score-row"><span>${id}</span><span>${playerScores[id]}</span></div>`;
+            });
         }
 
-        function iScored() {
+        function score() {
             let current = playerScores[myName] || 0;
             lobby.get(myName).put(current + 1);
-            document.body.style.background = "#200";
-            setTimeout(() => document.body.style.background = "#000", 100);
         }
 
-        function resetScores() {
-            if (confirm("Reset Everyone?")) {
-                Object.keys(playerScores).forEach(id => lobby.get(id).put(0));
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.code === "Space") { e.preventDefault(); iScored(); }
-            document.getElementById('scanner').focus();
-        });
-
-        document.getElementById('scanner').addEventListener('change', (e) => {
-            if (e.target.value.trim()) { iScored(); e.target.value = ''; }
-        });
-
-        setInterval(() => {
-            if (document.getElementById('game-ui').style.display === 'block') {
-                document.getElementById('scanner').focus();
-            }
-        }, 1000);
+        // Spacebar and Scanner
+        document.addEventListener('keydown', (e) => { if(e.code === "Space") score(); document.getElementById('scanner').focus(); });
+        document.getElementById('scanner').onchange = (e) => { if(e.target.value) { score(); e.target.value=''; } };
+        setInterval(() => document.getElementById('scanner').focus(), 1000);
     </script>
 </body>
 </html>
