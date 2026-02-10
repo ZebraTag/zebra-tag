@@ -15,7 +15,7 @@ If you do not already have an account, please create one! It’s easy and free a
 
 After creating an account, sign in and do one of two things ;
 
-A. If you want to “host” create a room code i.e. ; room , 4, cat, 3257. It could literally be anything. And then you are in the lobby! 
+A. If you want to “host” create a room code i.e. ; room, 4, cat, 3257. It could literally be anything. And then you are in the lobby! 
 
  
 
