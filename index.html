@@ -1,302 +1,159 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ZEBRA TAG v14 - THE RELOAD</title>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <title>ZEBRA TAG - PRO EDITION</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
-        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; }
-        #status-light { width: 10px; height: 10px; border-radius: 50%; background: grey; }
+        #status-container { position: fixed; top: 10px; right: 10px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; z-index: 1000; }
         .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
         #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; }
         #scanner { position: absolute; left: -9999px; opacity: 0; }
-        .admin-btn { background: #200; color: #f00; border: 1px solid #f00; padding: 10px; margin-top: 40px; cursor: pointer; font-size: 0.8rem; }
-        #debug-log { font-size: 0.6rem; color: #444; margin-top: 20px; }
+        button { background: #0f0; color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
+        #operator-display { color: white; margin-bottom: 20px; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
-    <div id="status-container"><span id="status-text">INIT...</span><div id="status-light"></div></div>
+    <div id="status-container">NETWORK: <span id="status-text" style="color:orange">CONNECTING...</span></div>
 
     <div id="login-screen">
-        <h1>ZEBRA TAG ONLINE</h1>
+        <h1>ZEBRA TAG PRO</h1>
         <input type="text" id="username-input" placeholder="OPERATOR NAME...">
-        <button onclick="joinGame()" style="background:#0f0; padding:15px 40px; margin-top:20px; font-weight:bold; cursor:pointer;">START</button>
+        <button onclick="joinGame()" style="margin-top: 20px;">START ENGINE</button>
     </div>
 
     <div id="game-ui" style="display:none;">
-        <div id="operator-tag" style="color:white; margin-bottom:20px;"></div>
+        <div id="operator-display"></div>
         <div id="board"></div>
-        
-        <button class="admin-btn" onclick="resetScores()">WIPE ALL SCORES</button>
-        
-        <div id="debug-log">Log: System starting...</div>
+        <button onclick="resetScores()" style="background:red; color:white; margin-top:40px; font-size: 0.7rem;">WIPE GLOBAL DATA</button>
     </div>
 
-    <input type="text" id="scanner">
+    <input type="text" id="scanner" autofocus>
 
     <script>
-        // AGGRESSIVE PEER LIST: Trying 5 different entry points
-        const gun = Gun({
-            peers: [
-                'https://p2p.xyz/gun',
-                'https://gun-manhattan.herokuapp.com/gun',
-                'https://gun-us-west.herokuapp.com/gun',
-                'https://peer.wall.org/gun',
-                'https://dletta.com/gun'
-            ],
-            localStorage: true,
-            retry: 1000 
-        });
-
-        const lobby = gun.get('zebra_v14_final');
+        // 1. YOUR SUPABASE CONFIG (Paste your keys below)
+        const SUPABASE_URL = 'https://awstxoaxwsrhcfimunca.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_aZH46m2lP5s6KFeXrZ1gdA_MFNQROnW';
+        
+        // Initialize the client
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let myName = localStorage.getItem('zebraUser') || "";
         let playerScores = {};
 
-        function log(msg) { document.getElementById('debug-log').innerText = "Log: " + msg; }
-
-        // Status Monitor: Checks connections every 2 seconds
-        setInterval(() => {
-            const peers = gun.back('opt.peers');
-            let connected = false;
-            Object.keys(peers).forEach(id => {
-                if(peers[id].wire && peers[id].wire.readyState === 1) connected = true;
-            });
-            document.getElementById('status-light').style.background = connected ? "#0f0" : "#f00";
-            document.getElementById('status-text').innerText = connected ? "ONLINE" : "OFFLINE";
-        }, 2000);
-
-        if (myName) bootGame(myName);
-
-        function joinGame() {
+        async function joinGame() {
             const val = document.getElementById('username-input').value.trim().toUpperCase();
-            if (val.length > 0) {
+            if (val) {
                 localStorage.setItem('zebraUser', val);
-                bootGame(val);
+                myName = val;
+                bootGame();
             } else {
-                alert("Please enter a name!");
+                alert("Enter Name");
             }
         }
 
-        function bootGame(name) {
-            myName = name;
+        async function bootGame() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('operator-tag').innerText = "OPERATOR: " + myName;
-            log("Booted as " + myName);
+            document.getElementById('operator-display').innerText = "OPERATOR: " + myName;
 
-            // Listen for data from other players
-            lobby.map().on((score, id) => {
-                if (id && id !== 'undefined' && id !== 'null') {
-                    playerScores[id] = score;
-                    renderBoard();
-                }
+            // Update Status
+            document.getElementById('status-text').innerText = "ONLINE";
+            document.getElementById('status-text').style.color = "#0f0";
+
+            // A. Initial Data Fetch
+            const { data, error } = await _supabase.from('scores').select('*');
+            if (data) {
+                data.forEach(row => playerScores[row.username] = row.score);
+                render();
+            }
+
+            // B. Real-time Subscription (This makes the leaderboard move live!)
+            _supabase.channel('custom-all-channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, payload => {
+                    if (payload.new) {
+                        playerScores[payload.new.username] = payload.new.score;
+                        render();
+                    }
+                    if (payload.eventType === 'DELETE') {
+                        // Refresh data if someone wipes the board
+                        location.reload();
+                    }
+                }).subscribe();
+            
+            // C. Register our presence/Initial Score
+            await _supabase.from('scores').upsert({ 
+                username: myName, 
+                score: playerScores[myName] || 0 
             });
-
-            // Handshake: Announce our score (even if 0) to force a network sync
-            lobby.get(myName).put(playerScores[myName] || 0);
+            
             document.getElementById('scanner').focus();
         }
 
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
-            
-            sorted.forEach(id => {
-                if(playerScores[id] > 0 || id === myName) {
-                    const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
-                    board.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span><span>${playerScores[id]}</span></div>`;
-                }
-            });
-        }
+        async function iScored() {
+            let current = (playerScores[myName] || 0) + 1;
+            playerScores[myName] = current; // Optimistic update for speed
+            render();
 
-        function iScored() {
-            let current = (playerScores[myName] || 0);
-            lobby.get(myName).put(current + 1);
-            log("Scored! Total: " + (current + 1));
+            // Send hit to Supabase
+            const { error } = await _supabase.from('scores').upsert({ 
+                username: myName, 
+                score: current 
+            });
+
+            // Feedback Flash
             document.body.style.background = "#030";
             setTimeout(() => document.body.style.background = "#000", 100);
         }
 
-        function resetScores() {
-            if(confirm("Wipe all data for everyone?")) {
-                Object.keys(playerScores).forEach(id => {
-                    lobby.get(id).put(0);
-                });
+        function render() {
+            const b = document.getElementById('board');
+            b.innerHTML = '';
+            
+            // Sort by highest score
+            const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
+            
+            sorted.forEach(id => {
+                const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
+                b.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span><span>${playerScores[id]}</span></div>`;
+            });
+        }
+
+        async function resetScores() {
+            if(confirm("DANGER: This wipes scores for EVERYONE. Continue?")) {
+                await _supabase.from('scores').delete().neq('username', 'placeholder_garbage_value');
                 playerScores = {};
-                renderBoard();
-                log("Data wiped.");
+                render();
             }
         }
 
-        // Keyboard and Scanner Controls
-        document.addEventListener('keydown', (e) => {
-            if(e.code === "Space") { e.preventDefault(); iScored(); }
-            document.getElementById('scanner').focus();
-        });
-
-        document.getElementById('scanner').addEventListener('change', (e) => {
-            if(e.target.value.trim()) {
-                iScored();
-                e.target.value = '';
+        // Controls: Spacebar and Scanner Input
+        document.addEventListener('keydown', (e) => { 
+            if(e.code === "Space") {
+                e.preventDefault();
+                iScored(); 
             }
+            document.getElementById('scanner').focus(); 
         });
 
-        // Keep focus on the invisible scanner input
+        document.getElementById('scanner').addEventListener('change', (e) => { 
+            if(e.target.value.trim()) { 
+                iScored(); 
+                e.target.value = ''; 
+            } 
+        });
+
+        // Auto-focus helper
         setInterval(() => {
             if(document.getElementById('game-ui').style.display === 'block') {
                 document.getElementById('scanner').focus();
             }
         }, 1000);
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html>
-<head>
-    <title>ZEBRA TAG v13 - THE RELOAD</title>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
-        #status-container { position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.7rem; background: #111; padding: 8px; border: 1px solid #333; }
-        #status-light { width: 10px; height: 10px; border-radius: 50%; background: grey; }
-        .score-row { border: 1px solid #0f0; width: 95%; max-width: 400px; padding: 15px; display: flex; justify-content: space-between; font-size: 1.5rem; margin: 10px auto; }
-        #login-screen { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        #username-input { background: #111; color: #0f0; border: 2px solid #0f0; padding: 15px; font-size: 1.5rem; text-align: center; }
-        #scanner { position: absolute; left: -9999px; opacity: 0; }
-        .admin-btn { background: #200; color: #f00; border: 1px solid #f00; padding: 10px; margin-top: 40px; cursor: pointer; font-size: 0.8rem; }
-        #debug-log { font-size: 0.6rem; color: #444; margin-top: 20px; }
-    </style>
-</head>
-<body>
 
-    <div id="status-container"><span id="status-text">INIT...</span><div id="status-light"></div></div>
-
-    <div id="login-screen">
-        <h1>ZEBRA TAG ONLINE</h1>
-        <input type="text" id="username-input" placeholder="OPERATOR NAME...">
-        <button onclick="joinGame()" style="background:#0f0; padding:15px 40px; margin-top:20px; font-weight:bold; cursor:pointer;">START</button>
-    </div>
-
-    <div id="game-ui" style="display:none;">
-        <div id="operator-tag" style="color:white; margin-bottom:20px;"></div>
-        <div id="board"></div>
-        
-        <button class="admin-btn" onclick="resetScores()">WIPE ALL SCORES</button>
-        
-        <div id="debug-log">Log: System starting...</div>
-    </div>
-
-    <input type="text" id="scanner">
-
-    <script>
-        // Swapping to more reliable peer
-        const gun = Gun({
-            peers: ['https://p2p.xyz/gun', 'https://gun-manhattan.herokuapp.com/gun'],
-            localStorage: true
-        });
-        const lobby = gun.get('zebra_v13_stable');
-        
-        let myName = localStorage.getItem('zebraUser') || "";
-        let playerScores = {};
-
-        function log(msg) { document.getElementById('debug-log').innerText = "Log: " + msg; }
-
-        // Status Monitor
-        setInterval(() => {
-            const peers = gun.back('opt.peers');
-            let connected = false;
-            Object.keys(peers).forEach(id => {
-                if(peers[id].wire && peers[id].wire.readyState === 1) connected = true;
-            });
-            document.getElementById('status-light').style.background = connected ? "#0f0" : "#f00";
-            document.getElementById('status-text').innerText = connected ? "ONLINE" : "OFFLINE";
-        }, 2000);
-
-        if (myName) bootGame(myName);
-
-        function joinGame() {
-            const val = document.getElementById('username-input').value.trim().toUpperCase();
-            if (val.length > 0) {
-                localStorage.setItem('zebraUser', val);
-                bootGame(val);
-            } else {
-                alert("Please enter a name!");
-            }
-        }
-
-        function bootGame(name) {
-            myName = name;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('operator-tag').innerText = "OPERATOR: " + myName;
-            log("Booted as " + myName);
-
-            // Listen for data
-            lobby.map().on((score, id) => {
-                if (id && id !== 'undefined' && id !== 'null') {
-                    playerScores[id] = score;
-                    renderBoard();
-                }
-            });
-
-            // Initial ping
-            lobby.get(myName).put(playerScores[myName] || 0);
-            document.getElementById('scanner').focus();
-        }
-
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            const sorted = Object.keys(playerScores).sort((a,b) => playerScores[b] - playerScores[a]);
-            
-            sorted.forEach(id => {
-                if(playerScores[id] > 0 || id === myName) {
-                    const isMe = id === myName ? "style='border: 2px solid #fff;'" : "";
-                    board.innerHTML += `<div class="score-row" ${isMe}><span>${id}</span><span>${playerScores[id]}</span></div>`;
-                }
-            });
-        }
-
-        function iScored() {
-            let current = (playerScores[myName] || 0);
-            lobby.get(myName).put(current + 1);
-            log("Scored! Total: " + (current + 1));
-            document.body.style.background = "#030";
-            setTimeout(() => document.body.style.background = "#000", 100);
-        }
-
-        function resetScores() {
-            if(confirm("Wipe all data for everyone?")) {
-                Object.keys(playerScores).forEach(id => {
-                    lobby.get(id).put(0);
-                });
-                playerScores = {};
-                renderBoard();
-                log("Data wiped.");
-            }
-        }
-
-        // Spacebar + Scanner
-        document.addEventListener('keydown', (e) => {
-            if(e.code === "Space") { e.preventDefault(); iScored(); }
-            document.getElementById('scanner').focus();
-        });
-
-        document.getElementById('scanner').addEventListener('change', (e) => {
-            if(e.target.value.trim()) {
-                iScored();
-                e.target.value = '';
-            }
-        });
-
-        setInterval(() => {
-            if(document.getElementById('game-ui').style.display === 'block') {
-                document.getElementById('scanner').focus();
-            }
-        }, 1000);
+        // Auto-boot if name exists
+        if(myName) bootGame();
     </script>
 </body>
 </html>
