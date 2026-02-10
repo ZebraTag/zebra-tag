@@ -20,7 +20,12 @@
             min-height: 100vh;
         }
 
-        /* Status Light */
+        /* Nav Bar */
+        .top-nav {
+            width: 100%; display: flex; justify-content: space-between; 
+            align-items: center; padding: 20px; box-sizing: border-box;
+            position: absolute; top: 0;
+        }
         .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--neon); letter-spacing: 1px; }
         .dot { 
             width: 8px; height: 8px; background: var(--neon); 
@@ -48,26 +53,28 @@
             border-radius: 6px; letter-spacing: 1px;
         }
 
-        /* Centered Game Layout */
-        #game-screen { display: none; width: 100%; max-width: 500px; padding-bottom: 60px; }
-        
-        .top-nav {
-            width: 100%; display: flex; justify-content: space-between; 
-            align-items: center; padding: 20px; box-sizing: border-box;
+        /* Game Layout */
+        #game-screen { 
+            display: none; 
+            width: 100%; 
+            max-width: 500px; 
+            padding-top: 15vh; 
+            flex-direction: column;
+            align-items: center;
         }
 
         #hero-zone { 
-            margin-top: 8vh; /* Pushes the score down the screen */
-            margin-bottom: 60px;
             text-align: center;
+            width: 100%;
+            margin-bottom: 60px;
         }
 
-        .score-label { font-size: 0.75rem; letter-spacing: 5px; color: var(--gray); text-transform: uppercase; margin-bottom: 10px; }
-        #my-count { font-size: 8rem; font-weight: 900; margin: 15px 0; cursor: pointer; color: #fff; text-shadow: 0 0 25px rgba(0,255,0,0.3); line-height: 0.9; }
+        .score-label { font-size: 0.75rem; letter-spacing: 5px; color: var(--gray); text-transform: uppercase; margin-bottom: 5px; }
+        #my-count { font-size: 8rem; font-weight: 900; margin: 10px 0; cursor: pointer; color: #fff; text-shadow: 0 0 25px rgba(0,255,0,0.3); line-height: 0.9; }
         #op-name { color: var(--neon); font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; }
         
         /* Leaderboard */
-        #leaderboard-wrap { width: 90%; margin: 0 auto; }
+        #leaderboard-wrap { width: 90%; margin: 0 auto; text-align: left; padding-bottom: 100px; }
         .section-header { 
             text-align: center; border-bottom: 1px solid #222; 
             padding-bottom: 12px; margin-bottom: 20px;
@@ -78,14 +85,22 @@
             background: var(--panel); padding: 18px; 
             display: flex; justify-content: space-between; 
             margin-bottom: 12px; border-radius: 10px; font-size: 1.1rem; align-items: center;
-            border: 1px solid transparent; transition: 0.3s;
+            border: 1px solid transparent;
         }
-        .me-highlight { border: 1px solid var(--neon); background: #1a1a1a; box-shadow: 0 0 15px rgba(0,255,0,0.05); }
+        .me-highlight { border: 1px solid var(--neon); background: #1a1a1a; }
         .score-val { font-weight: bold; color: var(--neon); font-family: 'Courier New', monospace; }
         
-        .reset-link { font-size: 0.7rem; color: #222; cursor: pointer; margin-top: 25px; display: inline-block; text-transform: uppercase; letter-spacing: 1px; }
-        .reset-link:hover { color: var(--red); }
+        .reset-link { font-size: 0.7rem; color: #222; cursor: pointer; margin-top: 20px; display: inline-block; text-transform: uppercase; }
         
+        /* Admin Wipe Styling */
+        #admin-wipe { 
+            background: #100; 
+            color: var(--red); 
+            border: 1px solid #300; 
+            margin-top: 40px; 
+            display: none; /* Controlled by JS */
+        }
+
         #scanner { position: fixed; top: -100px; opacity: 0; }
     </style>
 </head>
@@ -107,7 +122,6 @@
     <div id="lobby-screen" class="screen">
         <div class="box">
             <h2>SYNC SCANNER</h2>
-            <p style="color:var(--gray); font-size: 0.85rem; margin-bottom: 25px;">CONNECT TO STORE HUB</p>
             <input type="text" id="store-input" placeholder="STORE ID">
             <button class="btn" onclick="joinStore()">SYNC NOW</button>
             <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
@@ -118,12 +132,13 @@
         <div class="top-nav">
             <span id="store-display" style="font-size: 0.7rem; color: var(--gray);">ST: ---</span>
             <div class="status-pill"><div class="dot" id="status-dot"></div> CONNECTED</div>
-            <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-size: 0.7rem; font-weight: bold;">DISCONNECT</span>
+            <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-size: 0.7rem; font-weight: bold;">EXIT</span>
         </div>
 
         <div id="hero-zone">
             <div id="op-name">---</div>
-            <div style="height: 40px;"></div> <div class="score-label">SESSION SCANS</div>
+            <div style="height: 40px;"></div>
+            <div class="score-label">SESSION SCANS</div>
             <div id="my-count" onclick="iScored()">0</div>
             <div class="reset-link" onclick="resetMyScore()">Reset My Count</div>
         </div>
@@ -134,7 +149,7 @@
             </div>
             <div id="leaderboard-content"></div>
             
-            <button id="admin-wipe" class="btn" style="background:#100; color:var(--red); border: 1px solid #300; margin-top: 60px; display:none;" onclick="wipeStoreData()">WIPE STORE DATA</button>
+            <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE STORE DATA</button>
         </div>
     </div>
 
@@ -162,7 +177,7 @@
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('game-screen').style.display = (id === 'game-screen' ? 'block' : 'none');
+            document.getElementById('game-screen').style.display = (id === 'game-screen' ? 'flex' : 'none');
             if(id !== 'game-screen') document.getElementById(id).classList.add('active');
         }
 
@@ -200,8 +215,12 @@
             document.getElementById('store-display').innerText = "ST: " + currentStoreID;
             const user = firebase.auth().currentUser;
 
+            // Admin Check: Force show button if UID matches
+            if(user.uid === ADMIN_UID) {
+                document.getElementById('admin-wipe').style.display = 'block';
+            }
+
             db.ref(`stores/${currentStoreID}/scores/${user.uid}`).update({ name: myName });
-            if(user.uid === ADMIN_UID) document.getElementById('admin-wipe').style.display = 'block';
 
             db.ref(`stores/${currentStoreID}/scores`).on('value', s => {
                 const data = s.val() || {};
@@ -223,7 +242,15 @@
         }
 
         function resetMyScore() { if(confirm("Reset scans?")) db.ref(`stores/${currentStoreID}/scores/${firebase.auth().currentUser.uid}/score`).set(0); }
-        function wipeStoreData() { if(confirm("Wipe all data?")) db.ref(`stores/${currentStoreID}/scores`).remove(); }
+        
+        function wipeStoreData() { 
+            if(confirm("WIPE ALL STORE DATA? This cannot be undone.")) {
+                db.ref(`stores/${currentStoreID}/scores`).remove()
+                .then(() => alert("Store data wiped."))
+                .catch(e => alert("Error: " + e.message));
+            }
+        }
+
         function exitRoom() { db.ref(`stores/${currentStoreID}/scores`).off(); showScreen('lobby-screen'); }
         function handleSignOut() { firebase.auth().signOut().then(() => location.reload()); }
 
@@ -238,7 +265,7 @@
         });
 
         setInterval(() => {
-            if (document.getElementById('game-screen').style.display === 'block' && document.activeElement.tagName !== 'INPUT') {
+            if (document.getElementById('game-screen').style.display === 'flex' && document.activeElement.tagName !== 'INPUT') {
                 document.getElementById('scanner').focus();
             }
         }, 1000);
