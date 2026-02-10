@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZEBRA TAG PRO</title>
+    <title>ZEBRA TAG - V 0.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -114,23 +114,23 @@
             </div>
             <input type="email" id="email-input" placeholder="EMAIL">
             <input type="password" id="pass-input" placeholder="PASSWORD">
-            <button class="btn" onclick="handleAuth()">ENTER SYSTEM</button>
+            <button class="btn" onclick="handleAuth()">ENTER</button>
             <div onclick="toggleAuth()" style="cursor:pointer; font-size:0.75rem; color: var(--gray); margin-top:20px;">NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span></div>
         </div>
     </div>
 
     <div id="lobby-screen" class="screen">
         <div class="box">
-            <h2>SYNC SCANNER</h2>
-            <input type="text" id="store-input" placeholder="STORE ID">
-            <button class="btn" onclick="joinStore()">SYNC NOW</button>
+            <h2>LOBBY </h2>
+            <input type="text" id="store-input" placeholder="ROOM ID">
+            <button class="btn" onclick="joinStore()">JOIN </button>
             <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
         </div>
     </div>
 
     <div id="game-screen">
         <div class="top-nav">
-            <span id="store-display" style="font-size: 0.7rem; color: var(--gray);">ST: ---</span>
+            <span id="store-display" style="font-size: 0.7rem; color: var(--gray);">ROOM ID: ---</span>
             <div class="status-pill"><div class="dot" id="status-dot"></div> CONNECTED</div>
             <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-size: 0.7rem; font-weight: bold;">EXIT</span>
         </div>
