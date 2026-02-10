@@ -123,7 +123,7 @@
         <div class="box">
             <h2>LOBBY </h2>
             <input type="text" id="store-input" placeholder="ROOM ID">
-            <button class="btn" onclick="joinStore()">JOIN </button>
+            <button class="btn" onclick="joinStore()">JOIN A ROOM </button>
             <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
         </div>
     </div>
@@ -138,18 +138,18 @@
         <div id="hero-zone">
             <div id="op-name">---</div>
             <div style="height: 40px;"></div>
-            <div class="score-label">SESSION SCANS</div>
+            <div class="score-label">SCORE :  </div>
             <div id="my-count" onclick="iScored()">0</div>
             <div class="reset-link" onclick="resetMyScore()">Reset My Count</div>
         </div>
 
         <div id="leaderboard-wrap">
             <div class="section-header">
-                <span class="section-title">STORE RANKINGS</span>
+                <span class="section-title"> RANKINGS</span>
             </div>
             <div id="leaderboard-content"></div>
             
-            <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE STORE DATA</button>
+            <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE DATA</button>
         </div>
     </div>
 
