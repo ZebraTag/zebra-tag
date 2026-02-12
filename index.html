@@ -4,72 +4,276 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ZEBRA TAG - V 0.1</title>
-    
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root { --neon: #0f0; --dark: #070707; --panel: #121212; --red: #f44; --gray: #555; }
+        
+        body { 
+            background: var(--dark); 
+            color: var(--neon); 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Nav Bar */
+        .top-nav {
+            width: 100%; display: flex; justify-content: space-between; 
+            align-items: center; padding: 20px; box-sizing: border-box;
+            position: absolute; top: 0;
+        }
+        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--neon); letter-spacing: 1px; }
+        .dot { 
+            width: 8px; height: 8px; background: var(--neon); 
+            border-radius: 50%; box-shadow: 0 0 10px var(--neon);
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .flash { animation: flash-white 0.2s ease-out !important; }
+        @keyframes flash-white { 0% { background: #fff; box-shadow: 0 0 20px #fff; } 100% { background: var(--neon); } }
+
+        /* Screens */
+        .screen { display: none; position: fixed; inset: 0; background: var(--dark); flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .active { display: flex; }
+        .box { width: 85%; max-width: 380px; padding: 40px 20px; border: 1px solid var(--neon); background: #000; border-radius: 8px; }
+        
+        input { 
+            background: #000; color: var(--neon); border: 1px solid #333; 
+            padding: 16px; font-size: 1rem; text-align: center; width: 100%; 
+            margin-bottom: 15px; box-sizing: border-box; outline: none; border-radius: 6px;
+        }
+        
+        .btn { 
+            padding: 20px; background: var(--neon); color: #000; border: none; 
+            font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; 
+            border-radius: 6px; letter-spacing: 1px;
+        }
+
+        /* Game Layout */
+        #game-screen { 
+            display: none; 
+            width: 100%; 
+            max-width: 500px; 
+            padding-top: 15vh; 
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #hero-zone { 
+            text-align: center;
+            width: 100%;
+            margin-bottom: 60px;
+        }
+
+        .score-label { font-size: 0.75rem; letter-spacing: 5px; color: var(--gray); text-transform: uppercase; margin-bottom: 5px; }
+        #my-count { font-size: 8rem; font-weight: 900; margin: 10px 0; cursor: pointer; color: #fff; text-shadow: 0 0 25px rgba(0,255,0,0.3); line-height: 0.9; }
+        #op-name { color: var(--neon); font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; }
+        
+        /* Leaderboard */
+        #leaderboard-wrap { width: 90%; margin: 0 auto; text-align: left; padding-bottom: 100px; }
+        .section-header { 
+            text-align: center; border-bottom: 1px solid #222; 
+            padding-bottom: 12px; margin-bottom: 20px;
+        }
+        .section-title { font-size: 0.8rem; color: var(--gray); letter-spacing: 2px; }
+
+        .row { 
+            background: var(--panel); padding: 18px; 
+            display: flex; justify-content: space-between; 
+            margin-bottom: 12px; border-radius: 10px; font-size: 1.1rem; align-items: center;
+            border: 1px solid transparent;
+        }
+        .me-highlight { border: 1px solid var(--neon); background: #1a1a1a; }
+        .score-val { font-weight: bold; color: var(--neon); font-family: 'Courier New', monospace; }
+        
+        .reset-link { font-size: 0.7rem; color: #222; cursor: pointer; margin-top: 20px; display: inline-block; text-transform: uppercase; }
+        
+        /* Admin Wipe Styling */
+        #admin-wipe { 
+            background: #100; 
+            color: var(--red); 
+            border: 1px solid #300; 
+            margin-top: 40px; 
+            display: none; /* Controlled by JS */
+        }
+
+        #scanner { position: fixed; top: -100px; opacity: 0; }
+    </style>
 </head>
 <body>
 
-    <input type="text" id="scanner" autocomplete="off" inputmode="text">
-
     <div id="auth-screen" class="screen active">
-        <div class="flex-center">
-            <div class="box">
-                <h2 id="auth-title">ZEBRA TAG</h2>
-                <div id="reg-fields" style="display:none">
-                    <input type="text" id="username-input" placeholder="YOUR NAME">
-                </div>
-                <input type="email" id="email-input" placeholder="EMAIL" onkeydown="if(event.key==='Enter') handleAuth()">
-                <input type="password" id="pass-input" placeholder="PASSWORD" onkeydown="if(event.key==='Enter') handleAuth()">
-                <button class="btn" onclick="handleAuth()">ENTER</button>
-                
-                <div style="font-size:0.75rem; color: var(--gray); margin-top:20px;">
-                    <span id="toggle-link" onclick="toggleAuth()" style="cursor:pointer;">NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span></span>
-                    <span style="margin: 0 10px;">|</span>
-                    <span onclick="forgotPassword()" style="cursor:pointer; color: var(--red)">FORGOT PASSWORD?</span>
-                </div>
+        <div class="box">
+            <h2 id="auth-title">ZEBRA TAG LOGIN</h2>
+            <div id="reg-fields" style="display:none">
+                <input type="text" id="username-input" placeholder="YOUR NAME">
             </div>
+            <input type="email" id="email-input" placeholder="EMAIL">
+            <input type="password" id="pass-input" placeholder="PASSWORD">
+            <button class="btn" onclick="handleAuth()">ENTER</button>
+            <div onclick="toggleAuth()" style="cursor:pointer; font-size:0.75rem; color: var(--gray); margin-top:20px;">NEED ACCOUNT? <span style="color:var(--neon)">REGISTER</span></div>
         </div>
     </div>
 
     <div id="lobby-screen" class="screen">
-        <div class="flex-center">
-            <div class="box">
-                <h2>LOBBY</h2>
-                <input type="text" id="store-input" placeholder="ROOM ID" onkeydown="if(event.key==='Enter') joinStore()">
-                <button class="btn" onclick="joinStore()">JOIN ROOM</button>
-                <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
-            </div>
+        <div class="box">
+            <h2>LOBBY </h2>
+            <input type="text" id="store-input" placeholder="ROOM ID">
+            <button class="btn" onclick="joinStore()">JOIN ROOM </button>
+            <div onclick="handleSignOut()" style="cursor:pointer; font-size:0.75rem; color: var(--red); margin-top: 25px;">LOGOUT</div>
         </div>
     </div>
 
-    <div id="game-screen" class="screen">
+    <div id="game-screen">
         <div class="top-nav">
             <span id="store-display" style="font-size: 0.7rem; color: var(--gray);">ST: ---</span>
             <div class="status-pill"><div class="dot" id="status-dot"></div> CONNECTED</div>
             <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-size: 0.7rem; font-weight: bold;">EXIT</span>
         </div>
-        <div id="game-content" class="flex-center" style="justify-content: flex-start;">
-            <div id="hero-zone">
-                <div id="op-name">---</div>
-                <div style="height: 20px;"></div>
-                <div class="score-label">SCORE :</div>
-                <div id="my-count" onclick="focusScanner()">0</div>
-                <div id="scan-btn" class="scan-toggle" onclick="toggleAutoScan()">SCANNER: OFF</div>
-                <br><br>
-                <div class="reset-link" onclick="resetMyScore()">Reset My Count</div>
+
+        <div id="hero-zone">
+            <div id="op-name">---</div>
+            <div style="height: 40px;"></div>
+            <div class="score-label">SCORE :  </div>
+            <div id="my-count" onclick="iScored()">0</div>
+            <div class="reset-link" onclick="resetMyScore()">Reset My Count</div>
+        </div>
+
+        <div id="leaderboard-wrap">
+            <div class="section-header">
+                <span class="section-title"> RANKINGS</span>
             </div>
-            <div id="leaderboard-wrap">
-                <div style="color:var(--gray); font-size:0.7rem; letter-spacing:2px; margin-bottom:15px;">RANKINGS</div>
-                <div id="leaderboard-content"></div>
-                <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE DATA</button>
-            </div>
+            <div id="leaderboard-content"></div>
+            
+            <button id="admin-wipe" class="btn" onclick="wipeStoreData()">WIPE DATA</button>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <input type="text" id="scanner">
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFIuHkzGlTNn20-2hVyQUwaKXyqZ9kPRc",
+            projectId: "zebratagpro",
+            databaseURL: "https://zebratagpro-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const ADMIN_UID = "VhP6eNFlJBRmtpwyDCVp2GLIs9g2";
+        
+        let currentStoreID = "";
+        let myName = "";
+
+        function triggerFlash() {
+            const dot = document.getElementById('status-dot');
+            dot.classList.remove('flash');
+            void dot.offsetWidth;
+            dot.classList.add('flash');
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('game-screen').style.display = (id === 'game-screen' ? 'flex' : 'none');
+            if(id !== 'game-screen') document.getElementById(id).classList.add('active');
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('email-input').value.trim();
+            const pass = document.getElementById('pass-input').value;
+            const isReg = document.getElementById('reg-fields').style.display === 'block';
+            try {
+                if(isReg) {
+                    const user = document.getElementById('username-input').value.trim();
+                    const res = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+                    await db.ref('users/' + res.user.uid).set({ name: user.toUpperCase() || "OPERATOR" });
+                } else {
+                    await firebase.auth().signInWithEmailAndPassword(email, pass);
+                }
+            } catch(e) { alert(e.message); }
+        }
+
+        function toggleAuth() {
+            const f = document.getElementById('reg-fields');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('auth-title').innerText = f.style.display === 'none' ? "SYSTEM LOGIN" : "CREATE ACCOUNT";
+        }
+
+        function joinStore() {
+            const store = document.getElementById('store-input').value.trim().toUpperCase();
+            if(!store) return alert("Enter Store ID");
+            currentStoreID = store;
+            localStorage.setItem('zebra_last_store', store);
+            startApp();
+        }
+
+        function startApp() {
+            showScreen('game-screen');
+            document.getElementById('store-display').innerText = "ST: " + currentStoreID;
+            const user = firebase.auth().currentUser;
+
+            // Admin Check: Force show button if UID matches
+            if(user.uid === ADMIN_UID) {
+                document.getElementById('admin-wipe').style.display = 'block';
+            }
+
+            db.ref(`stores/${currentStoreID}/scores/${user.uid}`).update({ name: myName });
+
+            db.ref(`stores/${currentStoreID}/scores`).on('value', s => {
+                const data = s.val() || {};
+                document.getElementById('my-count').innerText = data[user.uid] ? (data[user.uid].score || 0) : 0;
+                const board = document.getElementById('leaderboard-content');
+                board.innerHTML = '';
+                Object.keys(data).sort((a,b) => (data[b].score || 0) - (data[a].score || 0)).forEach((id, i) => {
+                    const style = id === user.uid ? 'me-highlight' : '';
+                    board.innerHTML += `<div class="row ${style}"><span>#${i+1} ${data[id].name || "OP"}</span><span class="score-val">${data[id].score || 0}</span></div>`;
+                });
+            });
+        }
+
+        function iScored() {
+            const user = firebase.auth().currentUser;
+            if(!currentStoreID || !user) return;
+            triggerFlash();
+            db.ref(`stores/${currentStoreID}/scores/${user.uid}/score`).transaction(c => (c || 0) + 1);
+        }
+
+        function resetMyScore() { if(confirm("Reset scans?")) db.ref(`stores/${currentStoreID}/scores/${firebase.auth().currentUser.uid}/score`).set(0); }
+        
+        function wipeStoreData() { 
+            if(confirm("WIPE ALL STORE DATA? This cannot be undone.")) {
+                db.ref(`stores/${currentStoreID}/scores`).remove()
+                .then(() => alert("Store data wiped."))
+                .catch(e => alert("Error: " + e.message));
+            }
+        }
+
+        function exitRoom() { db.ref(`stores/${currentStoreID}/scores`).off(); showScreen('lobby-screen'); }
+        function handleSignOut() { firebase.auth().signOut().then(() => location.reload()); }
+
+        firebase.auth().onAuthStateChanged(async user => {
+            if(user) {
+                const snap = await db.ref('users/' + user.uid).get();
+                myName = snap.val()?.name || user.email.split('@')[0].toUpperCase();
+                document.getElementById('op-name').innerText = myName;
+                document.getElementById('store-input').value = localStorage.getItem('zebra_last_store') || "";
+                showScreen('lobby-screen');
+            } else { showScreen('auth-screen'); }
+        });
+
+        setInterval(() => {
+            if (document.getElementById('game-screen').style.display === 'flex' && document.activeElement.tagName !== 'INPUT') {
+                document.getElementById('scanner').focus();
+            }
+        }, 1000);
+
+        document.getElementById('scanner').addEventListener('change', (e) => {
+            if(e.target.value.toUpperCase().startsWith("SHP")) iScored();
+            e.target.value = '';
+        });
+    </script>
 </body>
 </html>
