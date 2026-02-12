@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZEBRA TAG - V0.1.8</title>
+    <title>ZEBRA TAG - V0.2.4</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -16,23 +16,8 @@
         input { background: #000; color: var(--neon); border: 1px solid #333; padding: 15px; font-size: 1rem; text-align: center; width: 100%; margin-bottom: 10px; box-sizing: border-box; outline: none; border-radius: 6px; }
         .btn { padding: 18px; background: var(--neon); color: #000; border: none; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; border-radius: 6px; }
         .btn-wipe { background: #200; color: var(--red); border: 1px solid #400; margin-top: 30px; display: none; }
-        
-        #game-screen { display: none; width: 100%; max-width: 500px; padding-top: 80px; flex-direction: column; align-items: center; }
-        
-        /* Updated Status Bar Padding */
-        .top-nav { 
-            width: 100%; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 20px 40px; /* Increased side padding from 25px to 40px */
-            position: fixed; 
-            top: 0; 
-            background: rgba(0,0,0,0.9); 
-            z-index: 1001; 
-            box-sizing: border-box; /* Ensures padding doesn't push width over 100% */
-        }
-
+        #game-screen { display: none; width: 100%; max-width: 500px; padding-top: 100px; flex-direction: column; align-items: center; }
+        .top-nav { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 25px 45px; position: fixed; top: 0; background: rgba(0,0,0,0.95); z-index: 1001; box-sizing: border-box; border-bottom: 1px solid #1a1a1a; }
         #my-count { font-size: 8rem; font-weight: 900; color: #fff; text-shadow: 0 0 20px rgba(0,255,0,0.4); margin: 0; cursor: pointer; transition: 0.3s; }
         #leaderboard-wrap { width: 90%; margin-top: 30px; padding-bottom: 50px; }
         .row { background: var(--panel); padding: 15px; display: flex; justify-content: space-between; margin-bottom: 8px; border-radius: 8px; border: 1px solid transparent; }
@@ -40,7 +25,6 @@
         #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { border: 2px solid var(--red); padding: 25px; background: #000; width: 80%; max-width: 300px; text-align: center; border-radius: 10px; }
         .edit-icon { cursor: pointer; margin-left: 8px; font-size: 0.9rem; vertical-align: middle; opacity: 0.7; transition: 0.2s; }
-        .edit-icon:hover { opacity: 1; color: #fff; }
         .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .connected .dot { background: var(--neon); box-shadow: 0 0 10px var(--neon); animation: blink 2s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -52,17 +36,17 @@
 
     <div id="custom-modal">
         <div class="modal-content" id="modal-box">
-            <h3 id="modal-title" style="color:var(--red)">CONFIRM ACTION</h3>
+            <h3 id="modal-title">CONFIRM ACTION</h3>
             <div id="modal-input-container"></div> 
             <p id="modal-text" style="color:#fff; font-size:0.9rem"></p>
-            <button class="btn" style="background:var(--neon); color:#000; margin-bottom:10px" id="modal-confirm">PROCEED</button>
-            <button class="btn" id="modal-cancel" style="background:var(--gray)" onclick="closeModal()">CANCEL</button>
+            <button class="btn" id="modal-confirm">PROCEED</button>
+            <button class="btn" id="modal-cancel" style="background:var(--gray); margin-top:10px" onclick="closeModal()">CANCEL</button>
         </div>
     </div>
 
     <div id="auth-screen" class="screen active">
         <div class="box">
-            <h2 id="auth-title">LOGIN</h2>
+            <h2>LOGIN</h2>
             <div id="reg-fields" style="display:none"><input type="text" id="username-input" placeholder="DISPLAY NAME"></div>
             <input type="email" id="email-input" placeholder="EMAIL">
             <input type="password" id="pass-input" placeholder="PASSWORD">
@@ -75,17 +59,14 @@
     <div id="game-screen">
         <div class="top-nav">
             <div id="conn-status" class="status-pill"><div class="dot"></div> <span id="conn-text">OFFLINE</span></div>
-            <span onclick="handleSignOut()" style="color:var(--red); cursor:pointer; font-weight:bold; font-size:0.8rem; letter-spacing: 1px;">LOGOUT</span>
+            <span onclick="handleSignOut()" style="color:var(--red); cursor:pointer; font-weight:bold; font-size:0.8rem;">LOGOUT</span>
         </div>
-
         <div style="display: flex; align-items: center; justify-content: center;">
             <div id="op-name" style="letter-spacing:2px; font-weight:bold">LOADING...</div>
             <span class="edit-icon" onclick="promptNameChange()">✎</span>
         </div>
-        
         <div style="color:var(--gray); font-size:0.7rem; margin-top:20px;">TOTAL SCANS</div>
         <h1 id="my-count" onclick="iScored()">0</h1>
-
         <div id="leaderboard-wrap">
             <div id="leaderboard-content"></div>
             <button id="admin-wipe" class="btn btn-wipe" onclick="wipeAllData()">ERASE ENTIRE BOARD</button>
@@ -104,174 +85,155 @@
         const db = firebase.database();
         const auth = firebase.auth();
         
-        const ADMIN_LIST = ["VhP6eNFlJBRmtpwyDCVp2GLIs9g2"];
+        const ADMIN_LIST = ["ssrP3E1JuvgvREJSP2mDEcggkeW2", "ssrP3E1JuvgvREJSP2mDEcggkeW2"];
         const RESET_TAG = "SHP RR01"; 
-        const BANNED_WORDS = ["ADMIN", "SYSTEM", "STAFF", "MODERATOR", "ROOT", "SUPPORT", "OWNER", "ZEBRATAG", "OFFICIAL", "FUCK", "SHIT", "ASS", "BITCH", "CUNT", "DICK", "COCK", "PUSSY", "BASTARD", "SLUT", "WHORE", "FUCKER", "SH1T", "A$$", "B1TCH", "D1CK", "C0CK", "PUSS", "NIGGER", "FAGGOT", "RETARD", "KIK3", "TRANNIE"]; 
         const COOLDOWN_TIME = 1000; 
-
         let nameMap = {}; 
         let lastScoresSnap = null;
         let canScan = true;
 
-        db.ref(".info/connected").on("value", (snap) => {
-            const statusBox = document.getElementById('conn-status');
-            const statusText = document.getElementById('conn-text');
-            if (snap.val() === true) { statusBox.classList.add('connected'); statusText.innerText = "CONNECTED"; }
-            else { statusBox.classList.remove('connected'); statusText.innerText = "OFFLINE"; }
-        });
-
-        function openModal(text, action, title = "CONFIRM ACTION", color = "var(--red)", showInput = false) {
+        function openModal(text, action, title = "CONFIRM", color = "var(--red)", showInput = false) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-title').style.color = color;
             document.getElementById('modal-box').style.borderColor = color;
             document.getElementById('modal-text').innerText = text;
             const container = document.getElementById('modal-input-container');
-            container.innerHTML = showInput ? `<input type="text" id="modal-field" placeholder="NEW NAME" style="margin-top:10px">` : "";
+            container.innerHTML = showInput ? `<input type="text" id="modal-field" placeholder="NEW NAME">` : "";
             document.getElementById('custom-modal').style.display = 'flex';
-            if(showInput) setTimeout(() => document.getElementById('modal-field').focus(), 100);
-            document.getElementById('modal-confirm').onclick = () => { 
-                const val = showInput ? document.getElementById('modal-field').value : null;
-                action(val); 
-                closeModal(); 
-            };
+            document.getElementById('modal-confirm').onclick = () => { action(showInput ? document.getElementById('modal-field').value : null); closeModal(); };
         }
         function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
 
-        async function handleAuth() {
-            const email = document.getElementById('email-input').value.trim();
-            const pass = document.getElementById('pass-input').value;
-            const isReg = document.getElementById('reg-fields').style.display === 'block';
-            if(!email || !pass) return;
-            try {
-                if(isReg) {
-                    const nameInput = document.getElementById('username-input').value.trim().toUpperCase() || "OPERATOR";
-                    if(BANNED_WORDS.some(w => nameInput.includes(w))) return openModal("NAME NOT ALLOWED.", () => {}, "RESTRICTED");
-                    if(nameInput.length < 2) return openModal("NAME TOO SHORT.", () => {}, "ERROR");
-                    const res = await auth.createUserWithEmailAndPassword(email, pass);
-                    await db.ref('users/' + res.user.uid).set({ name: nameInput });
-                } else { await auth.signInWithEmailAndPassword(email, pass); }
-            } catch(e) { openModal(e.message, () => {}, "SYSTEM ERROR"); }
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const modalVisible = document.getElementById('custom-modal').style.display === 'flex';
-                const authVisible = document.getElementById('auth-screen').classList.contains('active');
-                if (modalVisible) document.getElementById('modal-confirm').click();
-                else if (authVisible) handleAuth();
-            }
-        });
-
         function renderLeaderboard() {
-            if (!lastScoresSnap) return;
-            const scores = lastScoresSnap.val() || {};
             const user = auth.currentUser;
+            if(!user) return;
             const board = document.getElementById('leaderboard-content');
-            document.getElementById('my-count').innerText = scores[user.uid] || 0;
             
-            let html = '<div style="text-align:center; color:var(--gray); font-size:0.7rem; border-bottom:1px solid #222; padding-bottom:10px; margin-bottom:15px;">GLOBAL LEADERBOARD</div>';
-            const sortedIds = Object.keys(scores).sort((a,b) => scores[b] - scores[a]);
-            let rank = 1; 
-            for (let id of sortedIds) {
-                const isMe = id === user.uid ? 'me-highlight' : '';
-                html += `<div class="row ${isMe}"><span>${rank}. ${nameMap[id] || "OPERATOR"}</span><strong>${scores[id]}</strong></div>`;
-                rank++; 
+            if (!lastScoresSnap || !lastScoresSnap.exists()) {
+                document.getElementById('my-count').innerText = "0";
+                board.innerHTML = '<div style="color:var(--gray); padding:20px; text-align:center;">BOARD EMPTY</div>';
+                return;
             }
+
+            const scores = lastScoresSnap.val();
+            document.getElementById('my-count').innerText = scores[user.uid] || 0;
+            let html = '<div style="text-align:center; color:var(--gray); font-size:0.7rem; border-bottom:1px solid #222; padding-bottom:10px; margin-bottom:15px;">GLOBAL LEADERBOARD</div>';
+            
+            Object.keys(scores).sort((a,b) => scores[b]-scores[a]).forEach((id, i) => {
+                const displayName = nameMap[id] || 'OPERATOR';
+                html += `<div class="row ${id===user.uid?'me-highlight':''}"><span>${i+1}. ${displayName}</span><strong>${scores[id]}</strong></div>`;
+            });
             board.innerHTML = html;
         }
 
-        function promptNameChange() {
-            openModal("ENTER YOUR NEW DISPLAY NAME:", async (newName) => {
-                if(!newName) return;
-                const cleanName = newName.trim().toUpperCase();
-                if(BANNED_WORDS.some(w => cleanName.includes(w))) return openModal("NAME NOT ALLOWED.", () => {}, "RESTRICTED");
-                if(cleanName.length < 2) return openModal("NAME TOO SHORT.", () => {}, "ERROR");
-                const user = auth.currentUser;
-                await db.ref(`users/${user.uid}/name`).set(cleanName);
-                document.getElementById('op-name').innerText = cleanName;
-            }, "EDIT PROFILE", "var(--neon)", true);
+        async function triggerHardReset() {
+            // Instant local visual feedback
+            lastScoresSnap = null;
+            renderLeaderboard();
+            // Server wipe
+            db.ref('global_scores').set(null).catch(e => openModal("ERROR: " + e.message, ()=>{}));
         }
 
-        async function handleForgotPassword() {
-            const email = document.getElementById('email-input').value.trim();
-            if(!email) return openModal("Enter email first.", () => {}, "REQUIRED", "var(--neon)");
-            openModal(`Send reset link to ${email}?`, async () => {
-                try {
-                    await auth.sendPasswordResetEmail(email);
-                    setTimeout(() => openModal("Link sent!", () => {}, "SUCCESS", "var(--neon)"), 500);
-                } catch(e) { setTimeout(() => openModal(e.message, () => {}, "ERROR"), 500); }
-            }, "PASSWORD RESET", "var(--neon)");
+        document.getElementById('scanner').addEventListener('change', (e) => {
+            const val = e.target.value.toUpperCase().trim();
+            if(val === RESET_TAG) {
+                triggerHardReset();
+            } else if(val.startsWith("SHP ")) {
+                iScored();
+            }
+            e.target.value = '';
+        });
+
+        function iScored() {
+            if(!canScan || !auth.currentUser) return;
+            canScan = false;
+            document.getElementById('my-count').classList.add('cooldown');
+            db.ref(`global_scores/${auth.currentUser.uid}`).transaction(c => (c || 0) + 1);
+            setTimeout(() => { canScan = true; document.getElementById('my-count').classList.remove('cooldown'); }, COOLDOWN_TIME);
         }
 
-        function toggleAuth() {
-            const f = document.getElementById('reg-fields'), forgot = document.getElementById('forgot-link');
-            const toggleText = document.getElementById('toggle-text'), authBtn = document.getElementById('auth-btn');
-            const isLogin = f.style.display === 'none';
-            f.style.display = isLogin ? 'block' : 'none';
-            forgot.style.display = isLogin ? 'none' : 'block';
-            toggleText.innerText = isLogin ? "LOGIN" : "REGISTER";
-            authBtn.innerText = isLogin ? "REGISTER" : "LOGIN";
-        }
-
-        auth.onAuthStateChanged(async user => {
+        auth.onAuthStateChanged(user => {
             if(user) {
-                const snap = await db.ref('users/' + user.uid).get();
-                document.getElementById('op-name').innerText = snap.val()?.name || "OPERATOR";
-                if (ADMIN_LIST.includes(user.uid)) document.getElementById('admin-wipe').style.display = 'block';
-                startApp();
+                // Initialize name from database
+                db.ref('users/' + user.uid).get().then(s => {
+                    document.getElementById('op-name').innerText = s.val()?.name || "OPERATOR";
+                    if (ADMIN_LIST.includes(user.uid)) document.getElementById('admin-wipe').style.display = 'block';
+                    document.getElementById('auth-screen').classList.remove('active');
+                    document.getElementById('game-screen').style.display = 'flex';
+                    
+                    // Listen for all user name changes
+                    db.ref('users').on('value', s => { 
+                        nameMap = {}; // Clear and rebuild to ensure accuracy
+                        s.forEach(c => { nameMap[c.key] = c.val().name; }); 
+                        renderLeaderboard(); 
+                    });
+
+                    // Listen for score changes
+                    db.ref('global_scores').on('value', s => { 
+                        lastScoresSnap = s; 
+                        renderLeaderboard(); 
+                    });
+                });
             } else {
                 document.getElementById('game-screen').style.display = 'none';
                 document.getElementById('auth-screen').classList.add('active');
             }
         });
 
-        async function startApp() {
-            document.getElementById('auth-screen').classList.remove('active');
-            document.getElementById('game-screen').style.display = 'flex';
-            
-            db.ref('users').on('value', snap => {
-                nameMap = {};
-                snap.forEach(child => { nameMap[child.key] = child.val().name; });
-                renderLeaderboard();
-            });
-
-            db.ref('global_scores').on('value', s => {
-                lastScoresSnap = s;
-                renderLeaderboard();
-            });
+        async function handleAuth() {
+            const email = document.getElementById('email-input').value.trim();
+            const pass = document.getElementById('pass-input').value;
+            const isReg = document.getElementById('reg-fields').style.display === 'block';
+            try {
+                if(isReg) {
+                    const name = document.getElementById('username-input').value.trim().toUpperCase() || "OPERATOR";
+                    const res = await auth.createUserWithEmailAndPassword(email, pass);
+                    await db.ref('users/' + res.user.uid).set({ name });
+                } else { await auth.signInWithEmailAndPassword(email, pass); }
+            } catch(e) { openModal(e.message, () => {}); }
         }
 
-        function iScored() {
-            const user = auth.currentUser;
-            const scoreEl = document.getElementById('my-count');
-            if(!user || !canScan) return;
-            canScan = false;
-            scoreEl.classList.add('cooldown');
-            db.ref(`global_scores/${user.uid}`).transaction(current => (current || 0) + 1);
-            setTimeout(() => { canScan = true; scoreEl.classList.remove('cooldown'); }, COOLDOWN_TIME);
+        function toggleAuth() {
+            const isLogin = document.getElementById('reg-fields').style.display === 'none';
+            document.getElementById('reg-fields').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('toggle-text').innerText = isLogin ? "LOGIN" : "REGISTER";
+            document.getElementById('auth-btn').innerText = isLogin ? "REGISTER" : "LOGIN";
         }
-
-        function wipeAllData() { openModal("ERASE ENTIRE BOARD?", () => { db.ref('global_scores').remove(); }); }
         function handleSignOut() { auth.signOut().then(() => location.reload()); }
+        function wipeAllData() { openModal("WIPE ENTIRE BOARD?", () => triggerHardReset()); }
+        
+        function promptNameChange() { 
+            openModal("NEW NAME:", n => {
+                if(n) {
+                    const cleanName = n.toUpperCase().trim();
+                    db.ref(`users/${auth.currentUser.uid}/name`).set(cleanName);
+                    document.getElementById('op-name').innerText = cleanName;
+                    nameMap[auth.currentUser.uid] = cleanName; // Sync local map immediately
+                    renderLeaderboard();
+                }
+            }, "EDIT", "var(--neon)", true); 
+        }
 
-        setInterval(() => {
-            const modalVisible = document.getElementById('custom-modal').style.display === 'flex';
+        async function handleForgotPassword() {
+            const email = document.getElementById('email-input').value.trim();
+            if(!email) return openModal("Enter email first.", () => {}, "REQUIRED", "var(--neon)");
+            try {
+                await auth.sendPasswordResetEmail(email);
+                openModal("Link sent!", () => {}, "SUCCESS", "var(--neon)");
+            } catch(e) { openModal(e.message, () => {}, "ERROR"); }
+        }
+        
+        setInterval(() => { 
+            const modalOpen = document.getElementById('custom-modal').style.display === 'flex';
             const authVisible = document.getElementById('auth-screen').classList.contains('active');
-            if(!authVisible && !modalVisible) {
-                const sc = document.getElementById('scanner');
-                if(document.activeElement !== sc) sc.focus();
+            if(!modalOpen && !authVisible && document.activeElement.tagName !== 'INPUT') {
+                document.getElementById('scanner').focus(); 
             }
         }, 1000);
 
-        document.getElementById('scanner').addEventListener('change', (e) => {
-            const val = e.target.value.toUpperCase();
-            if(val === RESET_TAG) {
-                db.ref('global_scores').remove();
-                openModal("GLOBAL BOARD WIPED", () => {}, "SYSTEM RESET");
-            } else if(val.startsWith("SHP ")) {
-                iScored();
-            }
-            e.target.value = '';
+        db.ref(".info/connected").on("value", s => {
+            document.getElementById('conn-status').classList.toggle('connected', s.val() === true);
+            document.getElementById('conn-text').innerText = s.val() === true ? "CONNECTED" : "OFFLINE";
         });
     </script>
 </body>
