@@ -85,8 +85,8 @@
         const auth = firebase.auth();
         
         // --- CONFIG ---
-        const ADMIN_LIST = ["VhP6eNFlJBRmtpwyDCVp2GLIs9g2", "ssrP3E1JuvgvREJSP2mDEcggkeW2"];
-        const RESET_TAG = "SHP RR"; 
+        const ADMIN_LIST = ["VhP6eNFlJBRmtpwyDCVp2GLIs9g2",];
+        const RESET_TAG = "SHP RR01"; 
         const BANNED_WORDS = [// Impersonation
     "ADMIN", "SYSTEM", "STAFF", "MODERATOR", "ROOT", "SUPPORT", "OWNER", "ZEBRATAG", "OFFICIAL",
     // Profanity & Offensive Terms (Common)
@@ -252,7 +252,7 @@
             if(val === RESET_TAG) {
                 db.ref('global_scores').remove();
                 openModal("GLOBAL BOARD WIPED", () => {}, "SYSTEM RESET", "var(--red)");
-            } else if(val.startsWith("SHP")) {
+            } else if(val.startsWith("SHP ")) {
                 iScored();
             }
             e.target.value = '';
