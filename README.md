@@ -34,11 +34,6 @@ Leaderboard
 
 The leaderboard provides a live ranking of all registered users.
 
-4. Administration
-Admin Privileges
-
-Users verified in the ADMIN_LIST have access to the following:
-
-5. Legal Disclaimer
+4. Legal Disclaimer
 
 USE AT YOUR OWN RISK. The developer of Zebra Tag is not responsible or liable for any injury, property damage, or disciplinary action resulting from the use of this software. Users are expected to follow local laws and safety guidelines during physical gameplay.
