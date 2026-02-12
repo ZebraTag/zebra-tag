@@ -16,7 +16,7 @@
         input { background: #000; color: var(--neon); border: 1px solid #333; padding: 15px; font-size: 1rem; text-align: center; width: 100%; margin-bottom: 10px; box-sizing: border-box; outline: none; border-radius: 6px; }
         .btn { padding: 18px; background: var(--neon); color: #000; border: none; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; border-radius: 6px; }
         .btn-wipe { background: #200; color: var(--red); border: 1px solid #400; margin-top: 30px; display: none; }
-        #game-screen { display: none; width: 100%; max-width: 500px; padding-top: 80px; flex-direction: column; align-items: center; }
+        #game-screen { display: none; width: 100%; max-width: 500px; padding-top: 60px; flex-direction: column; align-items: center; }
         .top-nav { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; position: fixed; top: 0; background: rgba(0,0,0,0.8); z-index: 1001; }
         #my-count { font-size: 8rem; font-weight: 900; color: #fff; text-shadow: 0 0 20px rgba(0,255,0,0.4); margin: 0; cursor: pointer; }
         #leaderboard-wrap { width: 90%; margin-top: 30px; padding-bottom: 50px; }
@@ -48,37 +48,25 @@
             <input type="email" id="email-input" placeholder="EMAIL">
             <input type="password" id="pass-input" placeholder="PASSWORD">
             <button class="btn" id="auth-btn" onclick="handleAuth()">LOGIN</button>
-            
             <p id="forgot-link" onclick="handleForgotPassword()" style="font-size:0.75rem; margin-top:15px; cursor:pointer; color:var(--gray); text-decoration: underline;">FORGOT PASSWORD?</p>
-            
             <p onclick="toggleAuth()" style="font-size:0.8rem; margin-top:15px; cursor:pointer; color:var(--gray)">SWITCH TO <span style="color:var(--neon)" id="toggle-text">REGISTER</span></p>
-        </div>
-    </div>
-
-    <div id="lobby-screen" class="screen">
-        <div class="box">
-            <h2 id="lobby-greet">SYNCING...</h2>
-            <input type="text" id="store-input" placeholder="ROOM ID">
-            <button class="btn" id="join-btn" onclick="joinStore()">ENTER ROOM</button>
-            <p onclick="handleSignOut()" style="color:var(--red); cursor:pointer; margin-top:20px; font-size:0.8rem;">LOGOUT</p>
         </div>
     </div>
 
     <div id="game-screen">
         <div class="top-nav">
-            <span id="store-display" onclick="triggerSecretAdmin()" style="color:var(--gray); cursor:pointer;">ST: --</span>
             <div id="conn-status" class="status-pill"><div class="dot"></div> <span id="conn-text">OFFLINE</span></div>
-            <span onclick="exitRoom()" style="color:var(--red); cursor:pointer; font-weight:bold">EXIT</span>
+            <span onclick="handleSignOut()" style="color:var(--red); cursor:pointer; font-weight:bold; font-size:0.8rem">LOGOUT</span>
         </div>
 
         <div id="op-name" style="letter-spacing:2px; font-weight:bold">LOADING...</div>
         <div style="color:var(--gray); font-size:0.7rem; margin-top:20px;">TOTAL SCANS</div>
         <h1 id="my-count" onclick="iScored()">0</h1>
-        <div onclick="resetMyScore()" style="color:#333; font-size:0.7rem; cursor:pointer">RESET PERSONAL</div>
+        <div onclick="resetMyScore()" style="color:#333; font-size:0.7rem; cursor:pointer; margin-top:10px;">RESET PERSONAL</div>
 
         <div id="leaderboard-wrap">
             <div id="leaderboard-content"></div>
-            <button id="admin-wipe" class="btn btn-wipe" onclick="wipeStoreData()">ERASE ENTIRE BOARD</button>
+            <button id="admin-wipe" class="btn btn-wipe" onclick="wipeAllData()">ERASE ENTIRE BOARD</button>
         </div>
     </div>
 
@@ -93,23 +81,22 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const auth = firebase.auth();
-        const ADMIN_LIST = ["VhP6eNFlJBRmtpwyDCVp2GLIs9g2", "ssrP3E1JuvgvREJSP2mDEcggkeW2"];
         
-        let currentStoreID = "";
+        // --- ADMIN & CONFIG ---
+        const ADMIN_LIST = ["VhP6eNFlJBRmtpwyDCVp2GLIs9g2", "ssrP3E1JuvgvREJSP2mDEcggkeW2"];
+        const RESET_TAG = "RESET123"; // Scan this barcode to wipe everything!
+
         let nameMap = {}; 
 
+        // Connection Monitor
         db.ref(".info/connected").on("value", (snap) => {
             const statusBox = document.getElementById('conn-status');
             const statusText = document.getElementById('conn-text');
-            if (snap.val() === true) {
-                statusBox.classList.add('connected');
-                statusText.innerText = "CONNECTED";
-            } else {
-                statusBox.classList.remove('connected');
-                statusText.innerText = "OFFLINE";
-            }
+            if (snap.val() === true) { statusBox.classList.add('connected'); statusText.innerText = "CONNECTED"; }
+            else { statusBox.classList.remove('connected'); statusText.innerText = "OFFLINE"; }
         });
 
+        // Modal Logic
         function openModal(text, action, title = "CONFIRM ACTION", color = "var(--red)") {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-title').style.color = color;
@@ -119,6 +106,7 @@
         }
         function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
 
+        // Auth Logic
         async function handleAuth() {
             const email = document.getElementById('email-input').value.trim();
             const pass = document.getElementById('pass-input').value;
@@ -129,27 +117,18 @@
                     const nameInput = document.getElementById('username-input').value.trim().toUpperCase() || "OPERATOR";
                     const res = await auth.createUserWithEmailAndPassword(email, pass);
                     await db.ref('users/' + res.user.uid).set({ name: nameInput });
-                } else { 
-                    await auth.signInWithEmailAndPassword(email, pass); 
-                }
-            } catch(e) { 
-                openModal(e.message, () => {}, "SYSTEM ERROR", "var(--red)");
-            }
+                } else { await auth.signInWithEmailAndPassword(email, pass); }
+            } catch(e) { openModal(e.message, () => {}, "SYSTEM ERROR", "var(--red)"); }
         }
 
         async function handleForgotPassword() {
             const email = document.getElementById('email-input').value.trim();
-            if(!email) {
-                openModal("Enter email in the field first.", () => {}, "EMAIL REQUIRED", "var(--neon)");
-                return;
-            }
+            if(!email) { openModal("Enter email first.", () => {}, "REQUIRED", "var(--neon)"); return; }
             openModal(`Send reset link to ${email}?`, async () => {
                 try {
                     await auth.sendPasswordResetEmail(email);
-                    setTimeout(() => openModal("Reset link sent!", () => {}, "SUCCESS", "var(--neon)"), 500);
-                } catch(e) {
-                    setTimeout(() => openModal(e.message, () => {}, "ERROR", "var(--red)"), 500);
-                }
+                    setTimeout(() => openModal("Link sent!", () => {}, "SUCCESS", "var(--neon)"), 500);
+                } catch(e) { setTimeout(() => openModal(e.message, () => {}, "ERROR"), 500); }
             }, "PASSWORD RESET", "var(--neon)");
         }
 
@@ -158,70 +137,58 @@
             const forgot = document.getElementById('forgot-link');
             const toggleText = document.getElementById('toggle-text');
             const authBtn = document.getElementById('auth-btn');
-            
             if (f.style.display === 'none') {
-                f.style.display = 'block';
-                forgot.style.display = 'none';
-                toggleText.innerText = "LOGIN";
-                authBtn.innerText = "REGISTER";
+                f.style.display = 'block'; forgot.style.display = 'none'; toggleText.innerText = "LOGIN"; authBtn.innerText = "REGISTER";
             } else {
-                f.style.display = 'none';
-                forgot.style.display = 'block';
-                toggleText.innerText = "REGISTER";
-                authBtn.innerText = "LOGIN";
+                f.style.display = 'none'; forgot.style.display = 'block'; toggleText.innerText = "REGISTER"; authBtn.innerText = "LOGIN";
             }
         }
 
-        // ENTER KEY HANDLERS
         document.querySelectorAll('#auth-screen input').forEach(input => {
             input.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleAuth(); });
         });
-        document.getElementById('store-input').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') joinStore();
+
+        // App Initialization
+        auth.onAuthStateChanged(async user => {
+            if(user) {
+                const snap = await db.ref('users/' + user.uid).get();
+                const myName = snap.val()?.name || "OPERATOR";
+                document.getElementById('op-name').innerText = myName;
+                if (ADMIN_LIST.includes(user.uid)) document.getElementById('admin-wipe').style.display = 'block';
+                startApp();
+            } else {
+                document.getElementById('game-screen').style.display = 'none';
+                document.getElementById('auth-screen').classList.add('active');
+            }
         });
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('game-screen').style.display = (id === 'game-screen' ? 'flex' : 'none');
-            if(id !== 'game-screen') document.getElementById(id).classList.add('active');
-        }
-
-        function joinStore() {
-            const val = document.getElementById('store-input').value.trim().toUpperCase();
-            if(!val) return;
-            currentStoreID = val;
-            localStorage.setItem('zebra_last_store', val);
-            startApp();
-        }
-
         async function startApp() {
-            showScreen('game-screen');
-            document.getElementById('store-display').innerText = "ST: " + currentStoreID;
+            document.getElementById('auth-screen').classList.remove('active');
+            document.getElementById('game-screen').style.display = 'flex';
             const user = auth.currentUser;
+
+            // Pre-load all names
             const usersSnap = await db.ref('users').get();
             nameMap = {};
             usersSnap.forEach(child => { nameMap[child.key] = child.val().name; });
 
-            db.ref(`stores/${currentStoreID}/scores`).on('value', async s => {
+            // Listen for global scores
+            db.ref('global_scores').on('value', async s => {
                 const scores = s.val() || {};
                 const board = document.getElementById('leaderboard-content');
-                const myScore = typeof scores[user.uid] === 'object' ? (scores[user.uid].score || 0) : (scores[user.uid] || 0);
+                const myScore = scores[user.uid] || 0;
                 document.getElementById('my-count').innerText = myScore;
                 
-                let html = '<div style="text-align:center; color:var(--gray); font-size:0.7rem; border-bottom:1px solid #222; padding-bottom:10px; margin-bottom:15px;">LEADERBOARD</div>';
-                const sortedIds = Object.keys(scores).sort((a,b) => {
-                    const valA = typeof scores[a] === 'object' ? (scores[a].score || 0) : scores[a];
-                    const valB = typeof scores[b] === 'object' ? (scores[b].score || 0) : scores[b];
-                    return valB - valA;
-                });
+                let html = '<div style="text-align:center; color:var(--gray); font-size:0.7rem; border-bottom:1px solid #222; padding-bottom:10px; margin-bottom:15px;">GLOBAL LEADERBOARD</div>';
+                const sortedIds = Object.keys(scores).sort((a,b) => scores[b] - scores[a]);
+
                 for (let id of sortedIds) {
                     const isMe = id === user.uid ? 'me-highlight' : '';
                     if (!nameMap[id]) {
                         const nSnap = await db.ref(`users/${id}/name`).get();
                         nameMap[id] = nSnap.val() || "OPERATOR";
                     }
-                    const actualScore = typeof scores[id] === 'object' ? (scores[id].score || 0) : scores[id];
-                    html += `<div class="row ${isMe}"><span># ${nameMap[id]}</span><strong>${actualScore}</strong></div>`;
+                    html += `<div class="row ${isMe}"><span># ${nameMap[id]}</span><strong>${scores[id]}</strong></div>`;
                 }
                 board.innerHTML = html;
             });
@@ -229,49 +196,21 @@
 
         function iScored() {
             const user = auth.currentUser;
-            if(!currentStoreID || !user) return;
-            db.ref(`stores/${currentStoreID}/scores/${user.uid}`).transaction((current) => {
-                let count = 0;
-                if (typeof current === 'object' && current !== null) count = current.score || 0;
-                else count = current || 0;
-                return count + 1;
-            });
+            if(!user) return;
+            db.ref(`global_scores/${user.uid}`).transaction(current => (current || 0) + 1);
         }
 
-        function triggerSecretAdmin() {
-            if (auth.currentUser && ADMIN_LIST.includes(auth.currentUser.uid)) {
-                document.getElementById('admin-wipe').style.display = 'block';
-                openModal("ADMIN ACCESS GRANTED", () => {}, "SYSTEM ACCESS", "var(--neon)");
-            }
-        }
-
-        function wipeStoreData() {
-            if(!currentStoreID) return;
-            openModal("ERASE EVERYTHING?", () => { db.ref(`stores/${currentStoreID}/scores`).remove(); });
+        function wipeAllData() {
+            openModal("ERASE ENTIRE BOARD?", () => { db.ref('global_scores').remove(); });
         }
 
         function resetMyScore() {
-            openModal("Remove yourself?", () => { db.ref(`stores/${currentStoreID}/scores/${auth.currentUser.uid}`).remove(); });
-        }
-
-        function exitRoom() { 
-            db.ref(`stores/${currentStoreID}/scores`).off(); 
-            showScreen('lobby-screen'); 
+            openModal("Reset your personal score?", () => { db.ref(`global_scores/${auth.currentUser.uid}`).remove(); });
         }
 
         function handleSignOut() { auth.signOut().then(() => location.reload()); }
 
-        auth.onAuthStateChanged(async user => {
-            if(user) {
-                const snap = await db.ref('users/' + user.uid).get();
-                const myName = snap.val()?.name || "OPERATOR";
-                document.getElementById('lobby-greet').innerText = "HELLO, " + myName;
-                document.getElementById('op-name').innerText = myName;
-                document.getElementById('store-input').value = localStorage.getItem('zebra_last_store') || "";
-                showScreen('lobby-screen');
-            } else { showScreen('auth-screen'); }
-        });
-
+        // Scanner Focus & Input
         setInterval(() => {
             if(document.getElementById('game-screen').style.display === 'flex') {
                 const sc = document.getElementById('scanner');
@@ -280,7 +219,13 @@
         }, 1000);
 
         document.getElementById('scanner').addEventListener('change', (e) => {
-            if(e.target.value.toUpperCase().startsWith("SHP")) iScored();
+            const val = e.target.value.toUpperCase();
+            if(val === RESET_TAG) {
+                db.ref('global_scores').remove();
+                openModal("GLOBAL BOARD WIPED", () => {}, "SYSTEM RESET", "var(--red)");
+            } else if(val.startsWith("SHP")) {
+                iScored();
+            }
             e.target.value = '';
         });
     </script>
