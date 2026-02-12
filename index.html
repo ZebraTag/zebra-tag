@@ -65,7 +65,7 @@
             <div id="op-name" style="letter-spacing:2px; font-weight:bold">LOADING...</div>
             <span class="edit-icon" onclick="promptNameChange()">✎</span>
         </div>
-        <div style="color:var(--gray); font-size:0.7rem; margin-top:20px;">TOTAL SCANS</div>
+        <div style="color:var(--gray); font-size:0.7rem; margin-top:20px;">TOTAL POINTS</div>
         <h1 id="my-count" onclick="iScored()">0</h1>
         <div id="leaderboard-wrap">
             <div id="leaderboard-content"></div>
@@ -85,7 +85,7 @@
         const db = firebase.database();
         const auth = firebase.auth();
         
-        const ADMIN_LIST = ["ssrP3E1JuvgvREJSP2mDEcggkeW2", "ssrP3E1JuvgvREJSP2mDEcggkeW2"];
+        const ADMIN_LIST = ["ssrP3E1JuvgvREJSP2mDEcggkeW2"];
         const RESET_TAG = "SHP RR01"; 
         const COOLDOWN_TIME = 1000; 
         let nameMap = {}; 
