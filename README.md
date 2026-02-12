@@ -1,28 +1,44 @@
 # zebra-tag READ-ME
 
 
-This is a fun little "game" I made. Basically Laser tag. 
+ZEBRA TAG - V0.1.4
+Documentation and User Guide
 
-What you need to get started : 
+Zebra Tag is a web-based scoring engine for laser-tag style games using barcode technology and Firebase Realtime Database.
+1. Requirements
+Hardware
 
-1. Working my device - preferably the ones with the green lasers. 
-2. An OPU sticker that says  ”  SHP QT “ and print as many as you stickers as you want to play. ONLY use the stickers that have numbers attached to them otherwise it won’t register. 
+    Scanner: A barcode scanner that supports HID keyboard emulation (acts as a keyboard).
 
+    Tags: OPU stickers or printed barcodes.
 
-How it works: 
+2. Setup and Registration
+Account Creation
 
-If you do not already have an account, please create one! It’s easy and free and has password reset ability and usernames with more to come! 
+Users must register for a free account to participate in the global ranking.
+   
+3. Game Mechanics
+Scoring
 
-After creating an account, sign in and do one of two things ;
+    Authentication: Sign in to your account.
 
-A. If you want to “host” create a room code i.e. ; room, 4, cat, 3257. It could literally be anything. Hit join and you are in! 
+    Scanner Mode: The application automatically focuses on a hidden input field to capture scanner data.
 
- 
+    Valid Scans: When a barcode starting with "SHP" is detected, the user's score increases by one.
 
-B. If you want to “join” just enter your friends ROOM ID in the top left of their screen or they can verbally tell you, whatever works. 
+    Cooldown: A 1-second cooldown period follows every successful scan to prevent rapid-fire point accumulation. The score display will dim during this period.
 
+    Manual Entry: If hardware fails, tapping the primary score counter will trigger a manual point.
 
-And that’s all you need to do to join your friends and start playing laser tag! 
+Leaderboard
 
+The leaderboard provides a live ranking of all registered users.
 
-NOTE I AM NOT RESPONSIBLE OR LIABLE FOR ANY TROUBLE THI MAY GET YOU IN. USE AT OWN RISK!
+4. Administration
+Admin Privileges
+
+Users verified in the ADMIN_LIST have access to the following:
+
+5. Legal Disclaimer
+
+USE AT YOUR OWN RISK. The developer of Zebra Tag is not responsible or liable for any injury, property damage, or disciplinary action resulting from the use of this software. Users are expected to follow local laws and safety guidelines during physical gameplay.
